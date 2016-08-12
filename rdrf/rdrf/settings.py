@@ -5,7 +5,6 @@ import ssl
 # A wrapper around environment which has been populated from
 # /etc/rdrf/rdrf.conf in production. Also does type conversion of values
 from ccg_django_utils.conf import EnvConfig
-from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 # import message constants so we can use bootstrap style classes
 from django.contrib.messages import constants as message_constants
 
@@ -19,13 +18,18 @@ WEBAPP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # General site config
 PRODUCTION = env.get("production", False)
 
-# django-secure
+# https://docs.djangoproject.com/en/1.8/ref/middleware/#django.middleware.security.SecurityMiddleware
 SECURE_SSL_REDIRECT = env.get("secure_ssl_redirect", PRODUCTION)
-SECURE_FRAME_DENY = env.get("secure_frame_deny", PRODUCTION)
+SECURE_SSL_HOST = env.get("secure_ssl_host", False)
 SECURE_CONTENT_TYPE_NOSNIFF = env.get("secure_content_type_nosniff", PRODUCTION)
 SECURE_BROWSER_XSS_FILTER = env.get("secure_browser_xss_filter", PRODUCTION)
-SECURE_HSTS_SECONDS = env.get("secure_hsts_seconds", 10)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env.get("secure_hsts_include_subdomains", PRODUCTION)
+SECURE_REDIRECT_EXEMPT = env.getlist("secure_redirect_exempt", [])
+X_FRAME_OPTIONS = env.get("x_frame_options", 'DENY')
+
+# iprestrict config https://github.com/muccg/django-iprestrict
+IPRESRICT_TRUSTED_PROXIES = env.getlist("iprestrict_trusted_proxies", [])
+IPRESTRICT_RELOAD_RULES = env.get("iprestrict_reload_rules", True)
+IPRESTRICT_IGNORE_PROXY_HEADER = env.get("iprestrict_ignore_proxy_header", False)
 
 DEBUG = env.get("debug", not PRODUCTION)
 SITE_ID = env.get("site_id", 1)
@@ -47,7 +51,6 @@ LANGUAGES = (
     ('ar', 'Arabic'),
     ('de', 'German'),
     ('en', 'English'),
-    ('no', 'Norwegian'),
 )
 
 DATABASES = {
@@ -106,17 +109,26 @@ MONGO_CLIENT_SSL_CERTFILE = env.get("mongo_client_ssl_certfile", "") or None
 MONGO_CLIENT_SSL_CERT_REQS = env.get("mongo_client_ssl_cert_reqs", "") or ssl.CERT_NONE
 MONGO_CLIENT_SSL_CA_CERTS = env.get("mongo_client_ssl_ca_certs", "") or None
 
-
-# Django Core stuff
-TEMPLATE_LOADERS = [
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-    'django.template.loaders.eggs.Loader',
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [os.path.join(WEBAPP_ROOT, 'rdrf', 'templates')],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.debug",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.media",
+                "django.template.context_processors.request",
+                "django.template.context_processors.static",
+                "django.template.context_processors.tz",
+                "django.contrib.messages.context_processors.messages"
+            ],
+            "debug": DEBUG,
+        },
+    },
 ]
-
-TEMPLATE_DIRS = (
-    os.path.join(WEBAPP_ROOT, 'rdrf', 'templates'),
-)
 
 MESSAGE_TAGS = {
     message_constants.ERROR: 'alert alert-danger',
@@ -126,7 +138,6 @@ MESSAGE_TAGS = {
 
 MIDDLEWARE_CLASSES = (
     'useraudit.middleware.RequestToThreadLocalMiddleware',
-    'djangosecure.middleware.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     'iprestrict.middleware.IPRestrictMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -134,6 +145,8 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
 )
 
 
@@ -145,28 +158,23 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.messages',
     'django_extensions',
+    'django.contrib.admin',
     'messages_ui',
+    'ajax_select',
+    'explorer',
+    'useraudit',
+    'templatetag_handlebars',
+    'iprestrict',
+    'rest_framework',
+    'anymail',
     'rdrf',
     'registry.groups',
     'registry.patients',
     'registry.common',
     'registry.genetic',
-    'django.contrib.admin',
-    'ajax_select',
     'registration',
-    'explorer',
-    'djangosecure',
-    'useraudit',
-    'templatetag_handlebars',
-    'iprestrict',
-    'rest_framework',
 ]
 
-
-TEMPLATE_CONTEXT_PROCESSORS = TCP + (
-    'django.core.context_processors.i18n',
-    'django.core.context_processors.request',
-)
 
 # these determine which authentication method to use
 # apps use modelbackend by default, but can be overridden here
@@ -174,7 +182,7 @@ TEMPLATE_CONTEXT_PROCESSORS = TCP + (
 AUTHENTICATION_BACKENDS = [
     'useraudit.password_expiry.AccountExpiryBackend',
     'django.contrib.auth.backends.ModelBackend',
-    'useraudit.backend.AuthFailedLoggerBackend'
+    'rdrf.backends.AuthFailedLoggerNotificationBackend'
 ]
 
 # email
@@ -187,13 +195,13 @@ EMAIL_APP_NAME = env.get("email_app_name", "RDRF {0}".format(SCRIPT_NAME))
 EMAIL_SUBJECT_PREFIX = env.get("email_subject_prefix", "DEV {0}".format(SCRIPT_NAME))
 SERVER_EMAIL = env.get("server_email", "noreply@ccg_rdrf")
 
-# Django Notifications
-DEFAULT_FROM_EMAIL = env.get("default_from_email", "No Reply <no-reply@mg.ccgapps.com.au>")
-# Mail Gun
-EMAIL_BACKEND = 'django_mailgun.MailgunBackend'
-MAILGUN_ACCESS_KEY = env.get('DJANGO_MAILGUN_API_KEY', "")
-MAILGUN_SERVER_NAME = env.get('DJANGO_MAILGUN_SERVER_NAME', "")
+# Email Notifications
+DEFAULT_FROM_EMAIL = env.get('default_from_email', 'No Reply <no-reply@mg.ccgapps.com.au>')
 SERVER_EMAIL = env.get('DJANGO_SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+EMAIL_BACKEND = 'anymail.backends.mailgun.MailgunBackend'
+ANYMAIL = {
+    'MAILGUN_API_KEY': env.get('DJANGO_MAILGUN_API_KEY', ''),
+}
 
 # list of features  '*' means all , '' means none and ['x','y'] means site
 # supports features x and y
@@ -210,8 +218,8 @@ MANAGERS = ADMINS
 STATIC_ROOT = env.get('static_root', os.path.join(WEBAPP_ROOT, 'static'))
 STATIC_URL = '{0}/static/'.format(SCRIPT_NAME)
 
-MEDIA_ROOT = env.get('media_root', os.path.join(WEBAPP_ROOT, 'static', 'media'))
-MEDIA_URL = '{0}/static/media/'.format(SCRIPT_NAME)
+MEDIA_ROOT = env.get('media_root', os.path.join(WEBAPP_ROOT, 'uploads'))
+MEDIA_URL = '{0}/uploads/'.format(SCRIPT_NAME)
 
 # TODO AH I can't see how this setting does anything
 # for local development, this is set to the static serving directory. For
@@ -220,7 +228,6 @@ STATIC_SERVER_PATH = STATIC_ROOT
 
 # a directory that will be writable by the webserver, for storing various files...
 WRITABLE_DIRECTORY = env.get("writable_directory", "/tmp")
-TEMPLATE_DEBUG = DEBUG
 
 # session and cookies
 SESSION_COOKIE_AGE = env.get("session_cookie_age", 60 * 60)
@@ -235,6 +242,7 @@ CSRF_COOKIE_NAME = env.get("csrf_cookie_name", "csrf_{0}".format(SESSION_COOKIE_
 CSRF_COOKIE_DOMAIN = env.get("csrf_cookie_domain", "") or SESSION_COOKIE_DOMAIN
 CSRF_COOKIE_PATH = env.get("csrf_cookie_path", SESSION_COOKIE_PATH)
 CSRF_COOKIE_SECURE = env.get("csrf_cookie_secure", PRODUCTION)
+CSRF_COOKIE_HTTPONLY = env.get("csrf_cookie_httponly", True)
 
 # Testing settings
 INSTALLED_APPS.extend(['django_nose'])
@@ -356,8 +364,10 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django': {
+        '': {
             'handlers': ['console', 'file'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': True
         },
         'django.request': {
             'handlers': ['mail_admins'],
@@ -374,24 +384,16 @@ LOGGING = {
             'level': 'CRITICAL',
             'propagate': True,
         },
-        'rdrf': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
         'rdrf.rdrf.management.commands': {
             'handlers': ['shell'],
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'rdrf.export_import': {
             'handlers': ['console_simple'],
             'formatter': 'simplest',
-            'level': 'INFO',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
-        },
-        'py.warnings': {
-            'handlers': ['console'],
         },
     }
 }
@@ -416,36 +418,6 @@ INTERNAL_IPS = ('127.0.0.1', '172.16.2.1')
 
 INSTALL_NAME = env.get("install_name", 'rdrf')
 
-# Django Suit Config
-SUIT_CONFIG = {
-    'ADMIN_NAME': 'Rare Disease Registry Frameworks',
-    'MENU_OPEN_FIRST_CHILD': False,
-    'MENU_EXCLUDE': ('sites', 'rdrf.questionnaireresponse'),
-
-    'MENU': (
-        'auth',
-        'genetic',
-        'groups',
-        'iprestrict',
-        'patients',
-        'registration',
-        {'app': 'rdrf', 'label': 'Registry'},
-        {'app': 'rdrf', 'label': 'Questionnaires', 'models': [
-                {'label': 'Responses', 'url': 'admin:rdrf_questionnaireresponse_changelist'}
-        ]},
-        'explorer'
-    )
-}
-
-'''
-One can add custom menu items to the left hand manu in Django Suit
-'''
-CUSTOM_MENU_ITEMS = [
-    {'name': 'Import Registry Definition',
-        'url': '{0}/import'.format(SCRIPT_NAME), 'superuser': True},
-    {'name': 'Reports', 'url': '{0}/reports'.format(SCRIPT_NAME), 'superuser': True},
-]
-
 AJAX_LOOKUP_CHANNELS = {
     'gene': {'model': 'genetic.Gene', 'search_field': 'symbol'},
 }
@@ -455,20 +427,6 @@ ACCOUNT_ACTIVATION_DAYS = 2
 LOGIN_URL = '{0}/login'.format(SCRIPT_NAME)
 LOGIN_REDIRECT_URL = '{0}/'.format(SCRIPT_NAME)
 
-
-CUSTOM_PERMISSIONS = {
-    "patients": { # App Name
-        "patient": ( # Model Name
-            ("can_see_full_name", "Can see Full Name column"),
-            ("can_see_dob", "Can see Date of Birth column"),
-            ("can_see_working_groups", "Can see Working Groups column"),
-            ("can_see_diagnosis_progress", "Can see Diagnosis Progress column"),
-            ("can_see_diagnosis_currency", "Can see Diagnosis Currency column"),
-            ("can_see_genetic_data_map", "Can see Genetic Module column"),
-            ("can_see_data_modules", "Can see Data Modules column"),
-        )
-    }
-}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -489,155 +447,3 @@ EMAIL_NOTIFICATIONS = (
     (EMAIL_NOTE_OTHER_CLINICIAN, "Other Clinician"),
     (EMAIL_NOTE_NEW_PATIENT, "New Patient Registered")
 )
-
-GRID_PATIENT_LISTING = [
-    {
-        "access": {
-            "default": True,
-            "permission": ""
-        },
-        "data": "full_name",
-        "label": "Patient",
-        "order": 1
-    }, {
-        "access": {
-            "default": True,
-            "permission": ""
-        },
-        "data": "date_of_birth",
-        "label": "Date of Birth",
-        "order": 2
-    }, {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_working_groups"
-        },
-        "data": "working_groups_display",
-        "label": "Working Groups",
-        "order": 3
-    }, {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_diagnosis_progress"
-        },
-        "data": "diagnosis_progress",
-        "label": "Diagnosis Entry Progress",
-        "order": 4
-    }, {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_diagnosis_currency"
-        },
-        "data": "diagnosis_currency",
-        "label": "Updated < 365 days",
-        "order": 5
-    }, {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_genetic_data_map"
-        },
-        "data": "genetic_data_map",
-        "label": "Genetic Data",
-        "order": 6
-    }, {
-        "access": {
-            "default": True,
-            "permission": ""
-        },
-        "data": "data_modules",
-        "label": "Modules",
-        "order": 7
-    },
-    {
-        "access": {
-            "default": True,
-            "permission": ""
-        },
-        "data": "diagnosis_progress",
-        "label": "Data Entry Progress",
-        "order": 8
-    }
-]
-
-
-GRID_CONTEXT_LISTING = [
-     {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_full_name"
-        },
-        "data": "patient_link",
-        "label": "Patient",
-        "model": "func",
-        "order": 0
-    },
-    {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_dob",
-        },
-        "data": "date_of_birth",
-        "label": "Date of Birth",
-        "model": "Patient",
-        "order": 1
-    },
-
-    {
-        "access": {
-            "default": False,
-            "permission": ""
-        },
-        "data": "created_at",
-        "label": "Created",
-        "model": "RDRFContext",
-        "order": 2
-    },
-
-    {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_working_groups"
-        },
-        "data": "working_groups_display",
-        "label": "Working Groups",
-        "model": "Patient",
-        "order": 3
-    }, {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_diagnosis_progress"
-        },
-        "data": "diagnosis_progress",
-        "label": "Diagnosis Entry Progress",
-        "model": "Patient",
-        "order": 4
-    }, {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_diagnosis_currency"
-        },
-        "data": "diagnosis_currency",
-        "label": "Updated < 365 days",
-        "model": "Patient",
-        "order": 5
-    }, {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_genetic_data_map"
-        },
-        "data": "genetic_data_map",
-        "label": "Genetic Data",
-        "model": "Patient",
-        "order": 6
-    },
-     {
-        "access": {
-            "default": False,
-            "permission": "patients.can_see_data_modules",
-        },
-        "data": "context_menu",
-        "label": "Modules",
-        "model": "func",
-        "order": 9
-    }
-]

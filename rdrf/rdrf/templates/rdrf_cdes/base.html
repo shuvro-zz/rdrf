@@ -11,18 +11,16 @@
   <head>
       <title>{% trans "Rare Disease Registry Framework" %}</title>
 
-      <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+      <link rel="stylesheet" href="{% static 'bootstrap-3.1.1/css/bootstrap.min.css' %}">
       <link rel="stylesheet" type="text/css" href="{% static 'css/rdrf.css' %}" media="all">
       <link rel="stylesheet" type="text/css" href="{% static 'css/simple-sidebar.css' %}" media="all">
 
-      <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
-      <script type="text/javascript" src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
-      <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-      <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
-
+      <script type="text/javascript" src="{% static 'js/vendor/jquery-1.11.3.min.js' %}" ></script>
+      <script type="text/javascript" src="{% static 'js/vendor/jquery-ui-1.11.4.min.js' %}"></script>
+      <script type="text/javascript" src="{% static 'bootstrap-3.3.6/js/bootstrap.min.js' %}"></script>
       <script type="text/javascript" src="{% static 'js/calculated_field_plugin.js' %}"></script>
       <script type="text/javascript" src="{% static 'js/toggle_disabled.js' %}"></script>
-      <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
+      <script type="text/javascript" src="{% static 'js/vendor/underscore-1.5.2.min.js' %}"></script>
       <script type="text/javascript" src="{% static 'js/rpc_module.js' %}"></script>
       <script type="text/javascript">var django = { $: $.noConflict() }; if (!$) $ = django.$; </script>
       {% block extrastyle %}
@@ -68,9 +66,9 @@
                 
                 {% if registry_code %}
                     {% if request.user.is_parent  %}
-                        <li><a href="{% url 'parent_page' registry_code %}"><span class="glyphicon glyphicon-home"></span> Parent Page</a></li>
+                        <li><a href="{% url 'parent_page' registry_code %}"><span class="glyphicon glyphicon-home"></span> {% trans "Parent Page" %}</a></li>
                     {% elif request.user.is_patient %}
-                        <li><a href="{% url 'patient_page' registry_code %}"><span class="glyphicon glyphicon-home"></span> Patient Page</a></li>
+                        <li><a href="{% url 'patient_page' registry_code %}"><span class="glyphicon glyphicon-home"></span> {% trans "Patient Page" %}</a></li>
                     {% endif %}
                 {% endif %}
 
@@ -82,7 +80,7 @@
 
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-                        <span class="glyphicon glyphicon-tasks"></span> Menu<span class="caret"></span>
+                        <span class="glyphicon glyphicon-tasks"></span> {% trans "Menu" %}<span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu" role="menu">
                         {% if request.user.is_curator or request.user.is_superuser %}
@@ -112,12 +110,12 @@
                 {% if request.user.is_superuser %}
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-                            <span class="glyphicon glyphicon-wrench"></span> Settings<span class="caret"></span>
+                            <span class="glyphicon glyphicon-wrench"></span> {% trans "Settings" %}<span class="caret"></span>
                         </a>
                         <ul class="dropdown-menu" role="menu">
                             {% for quick_link in request.user.quick_links %}
                                 {% if quick_link.admin_link %}
-                                    <li><a href="{{quick_link.url}}"><span class="glyphicon {{quick_link.glyph_icon}}"></span> {{quick_link.text}}</a></li>
+                                    <li><a href="{{quick_link.url}}"><span class="glyphicon {{quick_link.glyph_icon}}"></span> {% trans quick_link.text %}</a></li>
                                 {% endif %}
                             {% endfor %}
                         </ul>
@@ -133,19 +131,19 @@
                     {% endif %}
                   <ul class="dropdown-menu" role="menu">
                     {% if request.user.is_superuser %}
-                        <li><a href="{% url 'admin:index' %}"><span class="glyphicon glyphicon-wrench"></span> Admin Page</a></li>
+                        <li><a href="{% url 'admin:index' %}"><span class="glyphicon glyphicon-wrench"></span> {% trans "Admin Page" %}</a></li>
                         <li class="divider"></li>
                     {% endif %}
                     {% if request.user.is_parent and registry_code %}
-                        <li><a href="{% url 'parent_edit' registry_code parent.id %}"><span class="glyphicon glyphicon-wrench"></span> Account</a></li>
+                        <li><a href="{% url 'parent_edit' registry_code parent.id %}"><span class="glyphicon glyphicon-wrench"></span> {% trans "Account" %}</a></li>
                     {% endif %}
-                    <li><a href="{% url 'password_reset' %}"><span class="glyphicon glyphicon-random"></span> Password Reset</a></li>
-                    <li><a href="{% url 'logout' %}?next={% url 'login_router' %}"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
+                    <li><a href="{% url 'password_reset' %}"><span class="glyphicon glyphicon-random"></span> {% trans "Password Reset" %}</a></li>
+                    <li><a href="{% url 'logout' %}?next={% url 'login_router' %}"><span class="glyphicon glyphicon-log-out"></span> {% trans "Logout" %}</a></li>
                   </ul>
                 </li>
             {% else %}
-                <li><a href="{% url 'login' %}?next={% url 'login_router' %}"><span class="glyphicon glyphicon-log-in"></span> Log in</a></li>
-                <li><a href="{% url 'password_reset' %}"><span class="glyphicon glyphicon-refresh"></span> Password Reset</a></li>
+                <li><a href="{% url 'login' %}?next={% url 'login_router' %}"><span class="glyphicon glyphicon-log-in"></span> {% trans "Log in" %}</a></li>
+                <li><a href="{% url 'password_reset' %}"><span class="glyphicon glyphicon-refresh"></span> {% trans "Password Reset" %}</a></li>
             {% endif %}
           </ul>
         </div><!-- /.navbar-collapse -->
@@ -155,7 +153,7 @@
     <div class="container">
         {% if messages %}
             {% for message in messages %}
-                <div {% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{ message }}</div>
+                <div {% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{message}}</div>
             {% endfor %}
         {% endif %}    
 

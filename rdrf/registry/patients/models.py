@@ -1,33 +1,30 @@
-from django.core import serializers
 import copy
 import json
 import datetime
+import os.path
 
-from django.db import models
+from django.conf import settings
+from django.core import serializers
 from django.core.files.storage import FileSystemStorage
-from django.db.models.signals import post_save
+from django.core.urlresolvers import reverse
+from django.db import models
+from django.db.models.signals import post_save, m2m_changed, post_delete
 from django.dispatch import receiver
 import pycountry
-import registry.groups.models
-from registry.utils import get_working_groups, get_registries
-from rdrf.models import Registry
-from registry.utils import stripspaces
-from django.conf import settings
-from rdrf.utils import mongo_db_name
+
 from rdrf.dynamic_data import DynamicDataWrapper
-from rdrf.models import Section
-from rdrf.models import ConsentQuestion
-from registry.groups.models import CustomUser
+from rdrf.models import Registry, Section, ConsentQuestion
 from rdrf.hooking import run_hooks
+from rdrf.utils import mongo_db_name
 from rdrf.mongo_client import construct_mongo_client
-from django.db.models.signals import m2m_changed, post_delete
+import registry.groups.models
+from registry.utils import get_working_groups, get_registries, stripspaces
+from registry.groups.models import CustomUser
 
 
 
 import logging
 logger = logging.getLogger(__name__)
-
-file_system = FileSystemStorage(location=settings.MEDIA_ROOT, base_url=settings.MEDIA_URL)
 
 _6MONTHS_IN_DAYS = 183
 
@@ -49,13 +46,13 @@ class Doctor(models.Model):
 
     # TODO: Is it possible for one doctor to work with multiple working groups?
     title = models.CharField(max_length=4, blank=True, null=True)
-    family_name = models.CharField(max_length=100, db_index=True)
-    given_names = models.CharField(max_length=100, db_index=True)
+    family_name = models.CharField(max_length=100, db_index=True, verbose_name="Family/Last name")
+    given_names = models.CharField(max_length=100, db_index=True, verbose_name="Given/First names")
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, blank=True, null=True)
     surgery_name = models.CharField(max_length=100, blank=True)
     speciality = models.CharField(max_length=100)
     address = models.TextField()
-    suburb = models.CharField(max_length=50, verbose_name="Suburb/Town")
+    suburb = models.CharField(max_length=50, verbose_name="Suburb/Town/City")
     postcode = models.CharField(max_length=20, blank=True, null=True)
     state = models.ForeignKey(State, verbose_name="State/Province/Territory", blank=True, null=True,
                               on_delete=models.SET_NULL)
@@ -190,7 +187,7 @@ class Patient(models.Model):
         on_delete=models.SET_NULL)
     next_of_kin_address = models.TextField(blank=True, null=True, verbose_name="Address")
     next_of_kin_suburb = models.CharField(
-        max_length=50, blank=True, null=True, verbose_name="Suburb/Town")
+        max_length=50, blank=True, null=True, verbose_name="Suburb/Town/City")
     next_of_kin_state = models.CharField(
         max_length=20, verbose_name="State/Province/Territory", blank=True, null=True)
     next_of_kin_postcode = models.IntegerField(verbose_name="Postcode", blank=True, null=True)
@@ -228,7 +225,15 @@ class Patient(models.Model):
         ordering = ["family_name", "given_names", "date_of_birth"]
         verbose_name_plural = "Patient List"
 
-        permissions = settings.CUSTOM_PERMISSIONS["patients"]["patient"]
+        permissions = (
+            ("can_see_full_name", "Can see Full Name column"),
+            ("can_see_dob", "Can see Date of Birth column"),
+            ("can_see_working_groups", "Can see Working Groups column"),
+            ("can_see_diagnosis_progress", "Can see Diagnosis Progress column"),
+            ("can_see_diagnosis_currency", "Can see Diagnosis Currency column"),
+            ("can_see_genetic_data_map", "Can see Genetic Module column"),
+            ("can_see_data_modules", "Can see Data Modules column"),
+        )
 
     @property
     def display_name(self):
@@ -330,10 +335,11 @@ class Patient(models.Model):
             form_name,
             section_code,
             data_element_code,
-            multisection=False):
+            multisection=False,
+            context_id=None):
         from rdrf.dynamic_data import DynamicDataWrapper
         from rdrf.utils import mongo_key
-        wrapper = DynamicDataWrapper(self)
+        wrapper = DynamicDataWrapper(self, rdrf_context_id=context_id)
         mongo_data = wrapper.load_dynamic_data(registry_code, "cdes")
         key = mongo_key(form_name, section_code, data_element_code)
         if mongo_data is None:
@@ -539,7 +545,8 @@ class Patient(models.Model):
         return None
 
     def get_contexts_url(self, registry_model):
-        from django.core.urlresolvers import reverse
+        # TODO - change so we don't need this
+        return None
         if not registry_model.has_feature("contexts"):
             return None
         else:
@@ -798,6 +805,30 @@ class Patient(models.Model):
             contexts.append(context_model)
         return contexts
 
+    def get_forms_by_group(self, context_form_group):
+        """
+        Return links (pair of url and text)
+        to existing forms "of type" (ie being in a context with a link to)  context_form_group
+        
+        """
+        assert context_form_group.supports_direct_linking, "Context Form group must only contain one form"
+        
+        form_model = context_form_group.form_models[0]
+
+        links = []
+
+        for context_model in sorted(self.context_models, key=lambda c: c.created_at, reverse=True):
+            if context_model.context_form_group and context_model.context_form_group.pk == context_form_group.pk:
+                link_text = context_model.context_form_group.get_name_from_cde(self, context_model)
+                link_url = reverse('registry_form', args=(context_model.registry.code,
+                                                          form_model.id,
+                                                          self.pk,
+                                                          context_model.id))
+                links.append((link_url, link_text))
+
+        return links
+        
+
     def default_context(self, registry_model):
         # return None if doesn't make sense
         from rdrf.models import RegistryType
@@ -818,9 +849,7 @@ class Patient(models.Model):
                 if context_model.context_form_group:
                     if context_model.context_form_group.is_default:
                         return context_model
-            raise Exception("no default context") 
-
-
+            raise Exception("no default context")
 
     def get_dynamic_data(self, registry_model, collection="cdes", context_id=None):
         from rdrf.dynamic_data import DynamicDataWrapper
@@ -942,15 +971,33 @@ class PatientAddress(models.Model):
         return ""
 
 
+class PatientConsentStorage(FileSystemStorage):
+    """
+    This is a normal default file storage, except the URL points to
+    authenticated file download view.
+    """
+    def url(self, name):
+        consent = PatientConsent.objects.filter(form=name).first()
+        if consent is not None:
+            rev = dict(consent_id=consent.id, filename=consent.filename)
+            return reverse("registry:consent-form-download", kwargs=rev)
+        return None
+
+
 class PatientConsent(models.Model):
     patient = models.ForeignKey(Patient)
     form = models.FileField(
         upload_to='consents',
-        storage=file_system,
+        storage=PatientConsentStorage(),
         verbose_name="Consent form",
         blank=True,
         null=True)
 
+    # fixme: add filename as a field, using the filename which was
+    # given at time of upload.
+    @property
+    def filename(self):
+        return os.path.basename(self.form.name)
 
 class PatientDoctor(models.Model):
     patient = models.ForeignKey(Patient)

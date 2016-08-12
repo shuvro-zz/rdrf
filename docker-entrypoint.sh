@@ -60,6 +60,7 @@ function defaults {
 
     : ${RUNSERVER:="web"}
     : ${RUNSERVERPORT:="8000"}
+    : ${SELENIUMRUNSERVERPORT:="18000"}
     : ${CACHESERVER:="cache"}
     : ${CACHEPORT:="11211"}
     : ${MEMCACHE:="${CACHESERVER}:${CACHEPORT}"}
@@ -72,7 +73,7 @@ function defaults {
 
 
 function selenium_defaults {
-    : ${RDRF_URL:="http://$DOCKER_ROUTE:$RUNSERVERPORT/"}
+    : ${RDRF_URL:="http://$DOCKER_ROUTE:$SELENIUMRUNSERVERPORT/"}
     #: ${RDRF_BROWSER:="*googlechrome"}
     : ${RDRF_BROWSER:="*firefox"}
 
@@ -81,6 +82,12 @@ function selenium_defaults {
     fi
 
     export RDRF_URL RDRF_BROWSER
+}
+
+
+function _django_check_deploy {
+    echo "running check --deploy"
+    django-admin.py check --deploy --settings=${DJANGO_SETTINGS_MODULE} 2>&1 | tee /data/uwsgi-check.log
 }
 
 
@@ -147,6 +154,7 @@ if [ "$1" = 'uwsgi' ]; then
 
     _django_collectstatic
     _django_migrate
+    _django_check_deploy
 
     exec uwsgi --die-on-term --ini ${UWSGI_OPTS}
 fi
@@ -161,6 +169,7 @@ if [ "$1" = 'uwsgi_fixtures' ]; then
     _django_collectstatic
     _django_migrate
     _django_dev_fixtures
+    _django_check_deploy
 
     exec uwsgi --die-on-term --ini ${UWSGI_OPTS}
 fi
