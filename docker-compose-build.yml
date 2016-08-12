@@ -1,6 +1,11 @@
 version: '2'
 services:
 
+  datadev:
+    extends:
+      file: docker-compose-common.yml
+      service: datadev
+
   base:
     build:
       context: ./
@@ -49,3 +54,10 @@ services:
     working_dir: /data
     volumes:
         - ./:/data
+ 
+  pipcompile:
+    extends:
+      file: docker-compose-common.yml
+      service: pipcompile
+    volumes_from:
+      - datadev
