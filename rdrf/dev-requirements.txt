@@ -2,3 +2,4 @@ sphinx
 sphinxcontrib-fulltoc
 Werkzeug==0.10.4
 python-Levenshtein
+pip-tools
