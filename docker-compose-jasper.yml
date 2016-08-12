@@ -1,65 +1,68 @@
-datadev:
-  extends:
-    file: docker-compose-common.yml
-    service: datadev
+version: '2'
+services:
 
-jasper:
-  extends:
-    file: docker-compose-common.yml
-    service: jasper
-  links:
-    - db:db
+  datadev:
+    extends:
+      file: docker-compose-common.yml
+      service: datadev
 
-smtp:
-  extends:
-    file: docker-compose-common.yml
-    service: smtp
+  jasper:
+    extends:
+      file: docker-compose-common.yml
+      service: jasper
+    links:
+      - db:db
 
-db:
-  extends:
-    file: docker-compose-common.yml
-    service: db
+  smtp:
+    extends:
+      file: docker-compose-common.yml
+      service: smtp
 
-cache:
-  extends:
-    file: docker-compose-common.yml
-    service: cache
+  db:
+    extends:
+      file: docker-compose-common.yml
+      service: db
 
-mongo:
-  extends:
-    file: docker-compose-common.yml
-    service: mongo
+  cache:
+    extends:
+      file: docker-compose-common.yml
+      service: cache
 
-nginx:
-  extends:
-    file: docker-compose-common.yml
-    service: nginx
-  links:
-    - uwsgi
+  mongo:
+    extends:
+      file: docker-compose-common.yml
+      service: mongo
 
-runserver:
-  extends:
-    file: docker-compose-common.yml
-    service: runserver
-  volumes_from:
-    - datadev
-  links:
-    - db
-    - cache
-    - mongo
-    - smtp
-    - jasper
-  ports:
-    - "8000:8000"
-uwsgi:
-  extends:
-    file: docker-compose-common.yml
-    service: uwsgi
-  volumes_from:
-    - datadev
-  links:
-    - db
-    - cache
-    - mongo
-    - runserver:web
-    - jasper
+  nginx:
+    extends:
+      file: docker-compose-common.yml
+      service: nginx
+    links:
+      - uwsgi
+
+  runserver:
+    extends:
+      file: docker-compose-common.yml
+      service: runserver
+    volumes_from:
+      - datadev
+    links:
+      - db
+      - cache
+      - mongo
+      - smtp
+      - jasper
+    ports:
+      - "8000:8000"
+  uwsgi:
+    extends:
+      file: docker-compose-common.yml
+      service: uwsgi
+    volumes_from:
+      - datadev
+    links:
+      - db
+      - cache
+      - mongo
+      - runserver:web
+      - jasper

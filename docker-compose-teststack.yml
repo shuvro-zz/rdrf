@@ -1,40 +1,43 @@
-datatest:
-  extends:
-    file: docker-compose-common.yml
-    service: datatest
+version: '2'
+services:
 
-dbtest:
-  extends:
-    file: docker-compose-common.yml
-    service: db
+  datatest:
+    extends:
+      file: docker-compose-common.yml
+      service: datatest
 
-reportingtest:
-  extends:
-    file: docker-compose-common.yml
-    service: reporting
-  ports:
-    - "25633:5432"
+  dbtest:
+    extends:
+      file: docker-compose-common.yml
+      service: db
 
-cachetest:
-  extends:
-    file: docker-compose-common.yml
-    service: cache
+  reportingtest:
+    extends:
+      file: docker-compose-common.yml
+      service: reporting
+    ports:
+      - "25633:5432"
 
-mongotest:
-  extends:
-    file: docker-compose-common.yml
-    service: mongo
+  cachetest:
+    extends:
+      file: docker-compose-common.yml
+      service: cache
 
-runservertest:
-  extends:
-    file: docker-compose-common.yml
-    service: runserver
-  volumes_from:
-    - datatest
-  links:
-    - dbtest:db
-    - reportingtest:reporting
-    - cachetest:cache
-    - mongotest:mongo
-  ports:
-    - "18000:8000"
+  mongotest:
+    extends:
+      file: docker-compose-common.yml
+      service: mongo
+
+  runservertest:
+    extends:
+      file: docker-compose-common.yml
+      service: runserver
+    volumes_from:
+      - datatest
+    links:
+      - dbtest:db
+      - reportingtest:reporting
+      - cachetest:cache
+      - mongotest:mongo
+    ports:
+      - "18000:8000"

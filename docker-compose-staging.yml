@@ -1,40 +1,43 @@
-datastaging:
-  image: debian:jessie
-  volumes:
-    - ./data:/data
+version: '2'
+services:
 
-dbstaging:
-  extends:
-    file: docker-compose-common.yml
-    service: db
+  datastaging:
+    image: debian:jessie
+    volumes:
+      - ./data:/data
 
-cachestaging:
-  extends:
-    file: docker-compose-common.yml
-    service: cache
+  dbstaging:
+    extends:
+      file: docker-compose-common.yml
+      service: db
 
-mongostaging:
-  extends:
-    file: docker-compose-common.yml
-    service: mongo
+  cachestaging:
+    extends:
+      file: docker-compose-common.yml
+      service: cache
 
-uwsgistaging:
-  image: muccg/rdrf:next_release
-  command: uwsgi
-  environment:
-    - DBSERVER=dbstaging
-    - DBUSER=rdrfapp
-    - CACHESERVER=cachestaging
-    - MONGOSERVER=mongostaging
-    - WAIT_FOR_DB=1
-    - WAIT_FOR_CACHE=1
-    - WAIT_FOR_MONGO=1
-  volumes_from:
-    - datastaging
-  ports:
-    - "9300:9100"
-    - "9301:9101"
-  links:
-    - dbstaging
-    - cachestaging
-    - mongostaging
+  mongostaging:
+    extends:
+      file: docker-compose-common.yml
+      service: mongo
+
+  uwsgistaging:
+    image: muccg/rdrf:next_release
+    command: uwsgi
+    environment:
+      - DBSERVER=dbstaging
+      - DBUSER=rdrfapp
+      - CACHESERVER=cachestaging
+      - MONGOSERVER=mongostaging
+      - WAIT_FOR_DB=1
+      - WAIT_FOR_CACHE=1
+      - WAIT_FOR_MONGO=1
+    volumes_from:
+      - datastaging
+    ports:
+      - "9300:9100"
+      - "9301:9101"
+    links:
+      - dbstaging
+      - cachestaging
+      - mongostaging

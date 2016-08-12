@@ -1,68 +1,71 @@
-# data only container pattern
-datadev:
-  extends:
-    file: docker-compose-common.yml
-    service: datadev
+version: '2'
+services:
 
-smtp:
-  extends:
-    file: docker-compose-common.yml
-    service: smtp
+  # data only container pattern
+  datadev:
+    extends:
+      file: docker-compose-common.yml
+      service: datadev
 
-db:
-  extends:
-    file: docker-compose-common.yml
-    service: db
+  smtp:
+    extends:
+      file: docker-compose-common.yml
+      service: smtp
 
-reporting:
-  extends:
-    file: docker-compose-common.yml
-    service: reporting
-  ports:
-    - "15633:5432"
+  db:
+    extends:
+      file: docker-compose-common.yml
+      service: db
 
-cache:
-  extends:
-    file: docker-compose-common.yml
-    service: cache
+  reporting:
+    extends:
+      file: docker-compose-common.yml
+      service: reporting
+    ports:
+      - "15633:5432"
 
-mongo:
-  extends:
-    file: docker-compose-common.yml
-    service: mongo
+  cache:
+    extends:
+      file: docker-compose-common.yml
+      service: cache
 
-nginx:
-  extends:
-    file: docker-compose-common.yml
-    service: nginx
-  links:
-    - uwsgi
+  mongo:
+    extends:
+      file: docker-compose-common.yml
+      service: mongo
 
-runserver:
-  extends:
-    file: docker-compose-common.yml
-    service: runserver
-  volumes_from:
-    - datadev
-  links:
-    - db
-    #- legacydb
-    - reporting
-    - cache
-    - mongo
-    - smtp
-  ports:
-    - "8000:8000"
+  nginx:
+    extends:
+      file: docker-compose-common.yml
+      service: nginx
+    links:
+      - uwsgi
 
-uwsgi:
-  extends:
-    file: docker-compose-common.yml
-    service: uwsgi
-  volumes_from:
-    - datadev
-  links:
-    - db
-    - reporting
-    - cache
-    - mongo
-    - runserver:web
+  runserver:
+    extends:
+      file: docker-compose-common.yml
+      service: runserver
+    volumes_from:
+      - datadev
+    links:
+      - db
+      #- legacydb
+      - reporting
+      - cache
+      - mongo
+      - smtp
+    ports:
+      - "8000:8000"
+
+  uwsgi:
+    extends:
+      file: docker-compose-common.yml
+      service: uwsgi
+    volumes_from:
+      - datadev
+    links:
+      - db
+      - reporting
+      - cache
+      - mongo
+      - runserver:web

@@ -1,55 +1,58 @@
-# data only container pattern
-dataprod:
-  image: debian:jessie
-  volumes:
-    - ./data/prod:/data
+version: '2'
+services:
 
-smtpprod:
-  extends:
-    file: docker-compose-common.yml
-    service: smtp
+  # data only container pattern
+  dataprod:
+    image: debian:jessie
+    volumes:
+      - ./data/prod:/data
 
-dbprod:
-  extends:
-    file: docker-compose-common.yml
-    service: db
+  smtpprod:
+    extends:
+      file: docker-compose-common.yml
+      service: smtp
 
-reportingprod:
-  extends:
-    file: docker-compose-common.yml
-    service: reporting
-  ports:
-    - "15633:5432"
+  dbprod:
+    extends:
+      file: docker-compose-common.yml
+      service: db
 
-cacheprod:
-  extends:
-    file: docker-compose-common.yml
-    service: cache
+  reportingprod:
+    extends:
+      file: docker-compose-common.yml
+      service: reporting
+    ports:
+      - "15633:5432"
 
-mongoprod:
-  extends:
-    file: docker-compose-common.yml
-    service: mongo
+  cacheprod:
+    extends:
+      file: docker-compose-common.yml
+      service: cache
 
-nginxprod:
-  extends:
-    file: docker-compose-common.yml
-    service: nginx
-  links:
-    - uwsgiprod:uwsgi
+  mongoprod:
+    extends:
+      file: docker-compose-common.yml
+      service: mongo
 
-uwsgiprod:
-  image: muccg/rdrf:${GIT_TAG}
-  command: uwsgi_fixtures
-  environment:
-    - DBUSER=rdrfapp
-    - WAIT_FOR_DB=1
-    - WAIT_FOR_CACHE=1
-    - WAIT_FOR_MONGO=1
-  volumes_from:
-    - dataprod
-  links:
-    - dbprod:db
-    - cacheprod:cache
-    - reportingprod:reporting
-    - mongoprod:mongo
+  nginxprod:
+    extends:
+      file: docker-compose-common.yml
+      service: nginx
+    links:
+      - uwsgiprod:uwsgi
+
+  uwsgiprod:
+    image: muccg/rdrf:${GIT_TAG}
+    command: uwsgi_fixtures
+    environment:
+      - DBUSER=rdrfapp
+      - WAIT_FOR_DB=1
+      - WAIT_FOR_CACHE=1
+      - WAIT_FOR_MONGO=1
+    volumes_from:
+      - dataprod
+    links:
+      - dbprod:db
+      - cacheprod:cache
+      - reportingprod:reporting
+      - mongoprod:mongo

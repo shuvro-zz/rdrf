@@ -1,18 +1,21 @@
-seleniumhub:
-  image: selenium/hub
-  log_driver: json-file
-  log_opt:
-    max-size: "10m"
-    max-file: "5"
-  ports:
-    - "4444"
+version: '2'
+services:
 
-chrome:
-  image: selenium/node-chrome
-  links:
-  - seleniumhub:hub
+  seleniumhub:
+    image: selenium/hub
+    log_driver: json-file
+    log_opt:
+      max-size: "10m"
+      max-file: "5"
+    ports:
+      - "4444"
 
-firefox:
-  image: selenium/node-firefox
-  links:
-  - seleniumhub:hub
+  chrome:
+    image: selenium/node-chrome
+    links:
+    - seleniumhub:hub
+
+  firefox:
+    image: selenium/node-firefox
+    links:
+    - seleniumhub:hub
