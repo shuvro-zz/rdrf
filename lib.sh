@@ -35,7 +35,7 @@ usage() {
     echo ""
     echo "Usage:"
     echo " ./develop.sh (baseimage|buildimage|devimage|releasetarball|prodimage)"
-    echo " ./develop.sh (dev|dev_build)"
+    echo " ./develop.sh (dev|dev_build|django_admin|check_migrations)"
     echo " ./develop.sh (prod|prod_build)"
     echo " ./develop.sh (runtests|dev_lettuce|prod_lettuce)"
     echo " ./develop.sh (start_test_stack|start_seleniumhub)"
@@ -461,28 +461,29 @@ prod_lettuce() {
 }
 
 
-start_seleniumtests() {
+django_admin() {
     set -x
     set +e
-    docker-compose --project-name ${PROJECT_NAME} -f docker-compose-seleniumtests.yml up --force-recreate
+    docker-compose -f docker-compose-build.yml --project-name ${PROJECT_NAME} run --rm dev django-admin $@
     local rval=$?
     set -e
     set +x
 
-    return $rval
+    exit $rval
 }
 
 
-selenium() {
-    info 'selenium'
-    _start_selenium --force-recreate -d
-    _start_test_stack --force-recreate -d
+check_migrations() {
+    info 'check migrations'
+    mkdir -p data/dev
+    chmod o+rwx data/dev
 
-    start_seleniumtests
-    local rval=$?
+    set -x
+    set +e
+    docker-compose -f docker-compose-build.yml --project-name ${PROJECT_NAME} run --rm dev django-admin makemigrations --dry-run --noinput -e
+    local check=$?
+    set -e
+    set +x
 
-    _stop_test_stack
-    _stop_selenium
-
-    exit $rval
+    exec expr $check = 1 > /dev/null
 }
