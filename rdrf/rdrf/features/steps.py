@@ -34,15 +34,6 @@ def subprocess_logging(command):
         logger.error("Return code {0}".format(p.returncode))
 
 
-def drop_all_mongo():
-    logger.info("Dropping all mongo databases")
-    cmd = "db.getMongo().getDBNames().forEach(function(i){db.getSiblingDB(i).dropDatabase()})"
-    try:
-        subprocess_logging(["mongo", "--host", "mongo", "--eval", cmd])
-    except subprocess.CalledProcessError:
-        logger.exception("Dropping mongo databases failed")
-
-
 def reset_database_connection():
     from django import db
     db.connection.close()
@@ -56,13 +47,11 @@ def save_snapshot(snapshot_name, export_name):
     logger.info("Saving snapshot: {0}".format(snapshot_name))
     subprocess_logging(["stellar", "remove", snapshot_name])
     subprocess_logging(["stellar", "snapshot", snapshot_name])
-    subprocess_logging(["mongodump", "--host", "mongo", "--archive=" + snapshot_name + ".mongo"])
     world.snapshot_dict[export_name] = snapshot_name
 
 
 def save_minimal_snapshot():
     # delete everything so we can import clean later
-    drop_all_mongo()
     save_snapshot("minimal", "minimal")
 
 
@@ -73,7 +62,6 @@ def restore_minimal_snapshot():
 def restore_snapshot(snapshot_name):
     logger.info("Restoring snapshot: {0}".format(snapshot_name))
     subprocess_logging(["stellar", "restore", snapshot_name])
-    subprocess_logging(["mongorestore", "--host", "mongo", "--drop", "--archive=" + snapshot_name + ".mongo"])
 
 
 def import_registry(export_name):
