@@ -4,8 +4,8 @@ Feature: Admin Page and Settings
   In order to do administrative tasks using the Web UI
 
   Background:
-    Given export "dd.zip"
-    Given a registry named "Demyelinating Diseases Registry"
+    Given development fixtures
+    Given a registry named "Sample Registry"
 
   Scenario: Admin user drop-down has Admin Page item
     Given I am logged in as admin
