@@ -6,7 +6,7 @@
 
 **Closed issues:**
 
-- djnago-useraudit 1.4.0 [\#356](https://github.com/muccg/rdrf/issues/356)
+- django-useraudit 1.4.0 [\#356](https://github.com/muccg/rdrf/issues/356)
 
 ## [1.7.15](https://github.com/muccg/rdrf/tree/1.7.15) (2017-01-16)
 [Full Changelog](https://github.com/muccg/rdrf/compare/1.7.14...1.7.15)
