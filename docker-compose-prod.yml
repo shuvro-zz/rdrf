@@ -4,22 +4,15 @@ dataprod:
   volumes:
     - ./data/prod:/data
 
-smtpprod:
-  extends:
-    file: docker-compose-common.yml
-    service: smtp
-
 dbprod:
   extends:
     file: docker-compose-common.yml
     service: db
 
-reportingprod:
+dbclinicalprod:
   extends:
     file: docker-compose-common.yml
-    service: reporting
-  ports:
-    - "15633:5432"
+    service: db
 
 cacheprod:
   extends:
@@ -43,7 +36,9 @@ uwsgiprod:
   command: uwsgi_local
   environment:
     - DBUSER=rdrfapp
+    - CLINICAL_DBUSER=rdrfapp
     - WAIT_FOR_DB=1
+    - WAIT_FOR_CLINICAL_DB=1
     - WAIT_FOR_CACHE=1
     - WAIT_FOR_MONGO=1
     - DEPLOYMENT=test
@@ -52,8 +47,8 @@ uwsgiprod:
     - dataprod
   links:
     - dbprod:db
+    - dbclinicalprod:clinicaldb
     - cacheprod:cache
-    - reportingprod:reporting
     - mongoprod:mongo
   ports:
-    - "8433:8433"
+    - "9000:9000"

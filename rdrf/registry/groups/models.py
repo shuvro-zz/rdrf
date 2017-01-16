@@ -1,20 +1,15 @@
 import re
 
 from django.core import validators
-
-from django.contrib.auth.models import Group
 from django.contrib.auth.models import AbstractBaseUser, UserManager, PermissionsMixin
-
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-
 from django.db import models
-
 from django.dispatch import receiver
 
 from registration.signals import user_registered
-
 from rdrf.models import Registry
+from registry.groups import GROUPS as RDRF_GROUPS
 
 import logging
 
@@ -28,7 +23,7 @@ class WorkingGroup(models.Model):
     class Meta:
         ordering = ["registry__code"]
 
-    def __unicode__(self):
+    def __str__(self):
         if self.registry:
             return "%s %s" % (self.registry.code, self.name)
         else:
@@ -94,72 +89,38 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
             seen=False).order_by("-created")
 
     def in_registry(self, registry_model):
-        for reg in self.registry.all():
-            if reg.pk == registry_model.pk:
-                return True
+        return self.registry.filter(pk=registry_model.pk).exists()
+
+    def in_group(self, name):
+        return self.groups.filter(name__icontains=name).exists()
 
     @property
     def is_patient(self):
-        try:
-            patient_group = Group.objects.get(name__icontains="patients")
-            _is_patient = True if patient_group in self.groups.all() else False
-            return _is_patient
-        except Group.DoesNotExist:
-            return False
+        return self.in_group(RDRF_GROUPS.PATIENT)
 
     @property
     def is_parent(self):
-        try:
-            parent_group = Group.objects.get(name__icontains="parents")
-            _is_parent = True if parent_group in self.groups.all() else False
-            return _is_parent
-        except Group.DoesNotExist:
-            return False
+        return self.in_group(RDRF_GROUPS.PARENT)
 
     @property
     def is_clinician(self):
-        try:
-            clinical_group = Group.objects.get(name__icontains="clinical")
-            _is_clinicial = True if clinical_group in self.groups.all() else False
-            return _is_clinicial
-        except Group.DoesNotExist:
-            return False
+        return self.in_group(RDRF_GROUPS.CLINICAL)
 
     @property
     def is_genetic_staff(self):
-        try:
-            genetic_staff_group = Group.objects.get(name__icontains="genetic staff")
-            _is_genetic = True if genetic_staff_group in self.groups.all() else False
-            return _is_genetic
-        except Group.DoesNotExist:
-            return False
+        return self.in_group(RDRF_GROUPS.GENETIC_STAFF)
 
     @property
     def is_genetic_curator(self):
-        try:
-            genetic_curator_group = Group.objects.get(name__icontains="genetic curator")
-            _is_genetic = True if genetic_curator_group in self.groups.all() else False
-            return _is_genetic
-        except Group.DoesNotExist:
-            return False
+        return self.in_group(RDRF_GROUPS.GENETIC_CURATOR)
 
     @property
     def is_working_group_staff(self):
-        try:
-            g = Group.objects.get(name__icontains="working group staff")
-            t = True if g in self.groups.all() else False
-            return t
-        except Group.DoesNotExist:
-            return False
+        return self.in_group(RDRF_GROUPS.WORKING_GROUP_STAFF)
 
     @property
     def is_curator(self):
-        try:
-            curator_group = Group.objects.get(name__icontains="working group curator")
-            _is_curator = True if curator_group in self.groups.all() else False
-            return _is_curator
-        except Group.DoesNotExist:
-            return False
+        return self.in_group(RDRF_GROUPS.WORKING_GROUP_CURATOR)
 
     def get_groups(self):
         return self.groups.all()
@@ -204,30 +165,35 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return False
 
     @property
-    def quick_links(self):
+    def menu_links(self):
         from rdrf.quick_links import QuickLinks
+        qlinks = QuickLinks(self.get_registries_or_all())
         if self.is_superuser:
-            links = QuickLinks.ALL
-        elif self.is_curator:
-            links = QuickLinks.WORKING_GROUP_CURATORS
-        elif self.is_clinician:
-            links = QuickLinks.CLINICIAN
-        elif self.is_patient:
-            return []
-        elif self.is_genetic_curator:
-            links = QuickLinks.GENETIC_CURATORS
-        elif self.is_genetic_staff:
-            return QuickLinks.GENETIC_STAFF
-        elif self.is_working_group_staff:
-            links = QuickLinks.WORKING_GROUP_STAFF
+            links = qlinks.menu_links([RDRF_GROUPS.SUPER_USER])
         else:
-            links = []
+            links = qlinks.menu_links([group.name for group in self.groups.all()])
 
-        if not self.has_feature("questionnaires"):
-            links = links - QuickLinks.QUESTIONNAIRE_HANDLING
+        return links
 
-        if self.has_feature("family_linkage"):
-            links = links | QuickLinks.DOCTORS
+    @property
+    def settings_links(self):
+        links = []
+
+        if self.is_superuser:
+            from rdrf.quick_links import QuickLinks
+            qlinks = QuickLinks(self.get_registries_or_all())
+            links = qlinks.settings_links()
+
+        return links
+
+    @property
+    def admin_page_links(self):
+        links = []
+
+        if self.is_superuser:
+            from rdrf.quick_links import QuickLinks
+            qlinks = QuickLinks(self.get_registries_or_all())
+            links = qlinks.admin_page_links()
 
         return links
 
