@@ -1,5 +1,251 @@
 # Change Log
 
+## [Unreleased](https://github.com/muccg/rdrf/tree/HEAD)
+
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.15...HEAD)
+
+**Closed issues:**
+
+- djnago-useraudit 1.4.0 [\#356](https://github.com/muccg/rdrf/issues/356)
+
+## [1.7.15](https://github.com/muccg/rdrf/tree/1.7.15) (2017-01-16)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.14...1.7.15)
+
+**Closed issues:**
+
+- django-useraudit 1.4.0 [\#357](https://github.com/muccg/rdrf/issues/357)
+
+## [1.7.14](https://github.com/muccg/rdrf/tree/1.7.14) (2016-12-07)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.13...1.7.14)
+
+**Fixed bugs:**
+
+- TypeError at /\<REG\>/register/ [\#348](https://github.com/muccg/rdrf/issues/348)
+
+## [1.7.13](https://github.com/muccg/rdrf/tree/1.7.13) (2016-12-06)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.12...1.7.13)
+
+**Fixed bugs:**
+
+- Misconfigured reverse url lookup in menu [\#347](https://github.com/muccg/rdrf/issues/347)
+- Questionnaire error template syntax error [\#346](https://github.com/muccg/rdrf/issues/346)
+
+## [1.7.12](https://github.com/muccg/rdrf/tree/1.7.12) (2016-12-06)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.11...1.7.12)
+
+**Implemented enhancements:**
+
+- Top-left title action should take user to appropriate home page [\#337](https://github.com/muccg/rdrf/issues/337)
+- Top-left title should be customizable  [\#336](https://github.com/muccg/rdrf/issues/336)
+- Consistent container width across all pages [\#342](https://github.com/muccg/rdrf/issues/342)
+- Additional RDRF URLs in menu [\#341](https://github.com/muccg/rdrf/issues/341)
+- Add error message on unsuccessful login attempt  [\#340](https://github.com/muccg/rdrf/issues/340)
+- Menu cleanup [\#338](https://github.com/muccg/rdrf/issues/338)
+
+**Fixed bugs:**
+
+- Fix for upgraded registration redux [\#333](https://github.com/muccg/rdrf/issues/333)
+
+**Closed issues:**
+
+- Remove 'Support' and 'Report a bug' from the footer [\#335](https://github.com/muccg/rdrf/issues/335)
+- Remove 'dash' icon from menu items [\#339](https://github.com/muccg/rdrf/issues/339)
+
+## [1.7.11](https://github.com/muccg/rdrf/tree/1.7.11) (2016-11-28)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.10...1.7.11)
+
+**Implemented enhancements:**
+
+- pyparsing==2.1.10 [\#332](https://github.com/muccg/rdrf/issues/332)
+- polib==1.0.8 [\#331](https://github.com/muccg/rdrf/issues/331)
+- SQLAlchemy==1.0.16 [\#330](https://github.com/muccg/rdrf/issues/330)
+- djangorestframework==3.5.3 [\#328](https://github.com/muccg/rdrf/issues/328)
+- django-registration-redux==1.4 [\#327](https://github.com/muccg/rdrf/issues/327)
+- django-anymail==0.6.1 [\#326](https://github.com/muccg/rdrf/issues/326)
+- version lock django-ajax-selects==1.5.2 [\#325](https://github.com/muccg/rdrf/issues/325)
+- iprestrict 1.1.0 [\#324](https://github.com/muccg/rdrf/issues/324)
+- Management command to trigger form progress recalculation [\#322](https://github.com/muccg/rdrf/issues/322)
+
+**Fixed bugs:**
+
+- models: realign RegistryForm.position [\#323](https://github.com/muccg/rdrf/issues/323)
+
+**Closed issues:**
+
+- fh custom field file save form error \(modjgo branch\) [\#321](https://github.com/muccg/rdrf/issues/321)
+- Key error on save patient demographics ID [\#320](https://github.com/muccg/rdrf/issues/320)
+
+## [1.7.10](https://github.com/muccg/rdrf/tree/1.7.10) (2016-11-21)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.9...1.7.10)
+
+**Closed issues:**
+
+- Data Import Script [\#318](https://github.com/muccg/rdrf/issues/318)
+
+## [1.7.9](https://github.com/muccg/rdrf/tree/1.7.9) (2016-11-08)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.8...1.7.9)
+
+**Fixed bugs:**
+
+- 'NoneType' object has no attribute 'pk' [\#294](https://github.com/muccg/rdrf/issues/294)
+
+**Closed issues:**
+
+- explorer download error [\#313](https://github.com/muccg/rdrf/issues/313)
+
+## [1.7.8](https://github.com/muccg/rdrf/tree/1.7.8) (2016-11-02)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.7...1.7.8)
+
+**Implemented enhancements:**
+
+- settings: LOGIN\_FAILURE\_LIMIT [\#309](https://github.com/muccg/rdrf/issues/309)
+- django 1.10.3 [\#308](https://github.com/muccg/rdrf/issues/308)
+
+**Fixed bugs:**
+
+- template error rdrf/explorer/templates/explorer/query\_download.htm [\#307](https://github.com/muccg/rdrf/issues/307)
+- Edit password of user in Admin screen \( by admin\) gives 404 [\#306](https://github.com/muccg/rdrf/issues/306)
+
+## [1.7.7](https://github.com/muccg/rdrf/tree/1.7.7) (2016-11-01)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.6...1.7.7)
+
+**Implemented enhancements:**
+
+- Clean up user group membership test [\#302](https://github.com/muccg/rdrf/issues/302)
+
+**Fixed bugs:**
+
+- Email notification error [\#304](https://github.com/muccg/rdrf/issues/304)
+- Fix NoReverseMatch exception on main registry page [\#303](https://github.com/muccg/rdrf/issues/303)
+- NoReverseMatch at /admin/useraudit/loginattempt/ \(django-useraudit==1.3.3\) [\#298](https://github.com/muccg/rdrf/issues/298)
+
+## [1.7.6](https://github.com/muccg/rdrf/tree/1.7.6) (2016-10-31)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.5...1.7.6)
+
+**Fixed bugs:**
+
+- csrf failure on dd live site after 1.7.5 deploy [\#301](https://github.com/muccg/rdrf/issues/301)
+
+## [1.7.5](https://github.com/muccg/rdrf/tree/1.7.5) (2016-10-27)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.4...1.7.5)
+
+**Fixed bugs:**
+
+- ValueError at /admin/rdrf/registryform/add/ Cannot force an update in save\(\) with no primary key. [\#296](https://github.com/muccg/rdrf/issues/296)
+
+**Closed issues:**
+
+- missing migration prod \( settings dependant model field\) [\#295](https://github.com/muccg/rdrf/issues/295)
+
+## [1.7.4](https://github.com/muccg/rdrf/tree/1.7.4) (2016-10-25)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.3...1.7.4)
+
+**Implemented enhancements:**
+
+- Get rid of system check complain about '/reactivate' URL [\#285](https://github.com/muccg/rdrf/issues/285)
+
+**Fixed bugs:**
+
+- Demographics field \(upload family pedigree\) file upload not uploading file  [\#292](https://github.com/muccg/rdrf/issues/292)
+
+**Closed issues:**
+
+- Styling of 'delete' button  [\#287](https://github.com/muccg/rdrf/issues/287)
+
+## [1.7.3](https://github.com/muccg/rdrf/tree/1.7.3) (2016-10-24)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.2...1.7.3)
+
+**Fixed bugs:**
+
+- develop.sh MacOS compatibility [\#286](https://github.com/muccg/rdrf/issues/286)
+
+**Closed issues:**
+
+- develop.sh: macos compatability [\#289](https://github.com/muccg/rdrf/issues/289)
+- patient listing module drop down [\#288](https://github.com/muccg/rdrf/issues/288)
+
+## [1.7.2](https://github.com/muccg/rdrf/tree/1.7.2) (2016-10-21)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.1...1.7.2)
+
+**Fixed bugs:**
+
+- Django 1.10: Revert a render\_to\_response → render [\#284](https://github.com/muccg/rdrf/issues/284)
+
+## [1.7.1](https://github.com/muccg/rdrf/tree/1.7.1) (2016-10-18)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.0...1.7.1)
+
+**Implemented enhancements:**
+
+- account lockout event [\#283](https://github.com/muccg/rdrf/issues/283)
+
+## [1.7.0](https://github.com/muccg/rdrf/tree/1.7.0) (2016-10-17)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.6.10...1.7.0)
+
+**Fixed bugs:**
+
+- Import of fh failed with runtime error [\#274](https://github.com/muccg/rdrf/issues/274)
+- reexport\_test\_zips fails with error [\#282](https://github.com/muccg/rdrf/issues/282)
+- runtests fail because migrations invoked against reporting test database \( which is in fact the main db\) [\#279](https://github.com/muccg/rdrf/issues/279)
+- Spurious AddressType of POST gets created as side effect in base registration module [\#278](https://github.com/muccg/rdrf/issues/278)
+- Javascript error in report explorer [\#277](https://github.com/muccg/rdrf/issues/277)
+- Modules drop down not appearing on next\_release for fh import [\#273](https://github.com/muccg/rdrf/issues/273)
+
+**Closed issues:**
+
+- recreate test zips after schema change [\#281](https://github.com/muccg/rdrf/issues/281)
+- refs to removed smtp container in yamls [\#280](https://github.com/muccg/rdrf/issues/280)
+
+## [1.6.10](https://github.com/muccg/rdrf/tree/1.6.10) (2016-10-07)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.6.9...1.6.10)
+
+**Fixed bugs:**
+
+- referebce data not being created \(AddressTypes\) on inital site load [\#271](https://github.com/muccg/rdrf/issues/271)
+- CDE status fixes [\#270](https://github.com/muccg/rdrf/issues/270)
+
+## [1.6.9](https://github.com/muccg/rdrf/tree/1.6.9) (2016-10-03)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.6.8...1.6.9)
+
+**Fixed bugs:**
+
+- consents unicode error  [\#261](https://github.com/muccg/rdrf/issues/261)
+
+## [1.6.8](https://github.com/muccg/rdrf/tree/1.6.8) (2016-09-29)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.6.7...1.6.8)
+
+**Fixed bugs:**
+
+- Yaml export/import - 'information text' in 'Consent section' is not retained [\#250](https://github.com/muccg/rdrf/issues/250)
+
+**Closed issues:**
+
+- SERVER\_EMAIL define twice [\#258](https://github.com/muccg/rdrf/issues/258)
+- configurable selenium timeout [\#257](https://github.com/muccg/rdrf/issues/257)
+
+## [1.6.7](https://github.com/muccg/rdrf/tree/1.6.7) (2016-09-23)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.6.6...1.6.7)
+
+**Implemented enhancements:**
+
+- Updated django-useraudit to 1.3.0 [\#249](https://github.com/muccg/rdrf/issues/249)
+- gender choices for ParentGuardian [\#247](https://github.com/muccg/rdrf/issues/247)
+- Create utility script to re-export test zipfiles [\#240](https://github.com/muccg/rdrf/issues/240)
+- Registry export: if there is just one registry in the system default to that [\#239](https://github.com/muccg/rdrf/issues/239)
+- Make registry yaml export more suitable for diffing/merging [\#234](https://github.com/muccg/rdrf/issues/234)
+- \[RDR-1395\] Configurable file storage backend [\#214](https://github.com/muccg/rdrf/issues/214)
+
+**Fixed bugs:**
+
+- dynamic\_data: fix variable referenced before assignment [\#248](https://github.com/muccg/rdrf/issues/248)
+- AccountLockout emails not being sent [\#246](https://github.com/muccg/rdrf/issues/246)
+- Problems with display of download links of File CDEs in multisections [\#243](https://github.com/muccg/rdrf/issues/243)
+- \[RDR-1432\] File cde download link not appearing after upload in post view [\#219](https://github.com/muccg/rdrf/issues/219)
+- \[RDR-1396\] Show original unmunged filename for consent form file uploads [\#213](https://github.com/muccg/rdrf/issues/213)
+
+**Closed issues:**
+
+- Re-export the lettuce zip files [\#241](https://github.com/muccg/rdrf/issues/241)
+
 ## [1.6.6](https://github.com/muccg/rdrf/tree/1.6.6) (2016-09-13)
 [Full Changelog](https://github.com/muccg/rdrf/compare/1.6.5...1.6.6)
 
@@ -9,10 +255,6 @@
 
 ## [1.6.5](https://github.com/muccg/rdrf/tree/1.6.5) (2016-09-09)
 [Full Changelog](https://github.com/muccg/rdrf/compare/1.6.4...1.6.5)
-
-**Closed issues:**
-
-- \[RDR-1432\] File cde download link not appearing after upload in post view [\#219](https://github.com/muccg/rdrf/issues/219)
 
 ## [1.6.4](https://github.com/muccg/rdrf/tree/1.6.4) (2016-08-31)
 [Full Changelog](https://github.com/muccg/rdrf/compare/1.6.3...1.6.4)
