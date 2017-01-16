@@ -538,18 +538,12 @@
 [Full Changelog](https://github.com/muccg/rdrf/compare/1.2.1...1.2.2.0)
 
 ## [1.2.1](https://github.com/muccg/rdrf/tree/1.2.1) (2016-04-29)
-[Full Changelog](https://github.com/muccg/rdrf/compare/contextsdone...1.2.1)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.2.0...1.2.1)
 
 **Closed issues:**
 
 - \[RDR-1225\] Report wide format  [\#54](https://github.com/muccg/rdrf/issues/54)
 - \[RDR-1226\] Report ordering [\#53](https://github.com/muccg/rdrf/issues/53)
-
-## [contextsdone](https://github.com/muccg/rdrf/tree/contextsdone) (2015-12-17)
-[Full Changelog](https://github.com/muccg/rdrf/compare/serversidegriddone...contextsdone)
-
-## [serversidegriddone](https://github.com/muccg/rdrf/tree/serversidegriddone) (2015-12-08)
-[Full Changelog](https://github.com/muccg/rdrf/compare/1.2.0...serversidegriddone)
 
 
 
