@@ -240,6 +240,10 @@ class Patient(models.Model):
             return "%s, %s (Archived)" % (self.family_name, self.given_names)
 
     @property
+    def normal_name(self):
+        return '%s %s' % (self.given_names, self.family_name)
+
+    @property
     def age(self):
         """ in years """
         from datetime import date
