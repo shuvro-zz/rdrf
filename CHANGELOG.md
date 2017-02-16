@@ -1,12 +1,38 @@
 # Change Log
 
-## [Unreleased](https://github.com/muccg/rdrf/tree/HEAD)
+## [2.0.0](https://github.com/muccg/rdrf/tree/2.0.0) (2017-02-16)
+[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.15...2.0.0)
 
-[Full Changelog](https://github.com/muccg/rdrf/compare/1.7.15...HEAD)
+**Implemented enhancements:**
+
+- Deprecate Mongo ClinicalDB - replace with Postgresql [\#401](https://github.com/muccg/rdrf/issues/401)
+- settings: Use Django settings, not env directly [\#382](https://github.com/muccg/rdrf/issues/382)
+- If test zips are bad in some way - bail out of aloe tests early [\#371](https://github.com/muccg/rdrf/issues/371)
+- The users should be warned that their password will expire soon [\#369](https://github.com/muccg/rdrf/issues/369)
+- Make it obvious why the user has been deactivated  [\#368](https://github.com/muccg/rdrf/issues/368)
+- Read the django-useraudit settings in from environment variables [\#367](https://github.com/muccg/rdrf/issues/367)
+- Allow ordering of follow up forms by chronological order [\#366](https://github.com/muccg/rdrf/issues/366)
+- Enable patient archiving \(soft deletion\) and hard deletion for admin [\#365](https://github.com/muccg/rdrf/issues/365)
+
+**Fixed bugs:**
+
+- Error creating  a patient from a Questionnaire Response [\#388](https://github.com/muccg/rdrf/issues/388)
+- DataError at /explorer/query/download/12/download [\#391](https://github.com/muccg/rdrf/issues/391)
+- Error redirecting after deleting \(archiving\) a patient [\#389](https://github.com/muccg/rdrf/issues/389)
+- ValueError at /admin/rdrf/questionnaireresponse/ [\#386](https://github.com/muccg/rdrf/issues/386)
+- AttributeError at /DM1/questionnaire/ [\#385](https://github.com/muccg/rdrf/issues/385)
+- TypeError at /patientslisting [\#384](https://github.com/muccg/rdrf/issues/384)
+- RegistryRouter: fix connections may not be iterable, remove same db [\#383](https://github.com/muccg/rdrf/issues/383)
+- Error running data migration for cdefile [\#380](https://github.com/muccg/rdrf/issues/380)
+- Field size for registry form name on cde file model too small [\#377](https://github.com/muccg/rdrf/issues/377)
 
 **Closed issues:**
 
-- django-useraudit 1.4.0 [\#356](https://github.com/muccg/rdrf/issues/356)
+- 'Account lockout' emails are not sending from https://fhregistry-international.com/ [\#378](https://github.com/muccg/rdrf/issues/378)
+- Modjgo management command converted dates to isostrings  [\#393](https://github.com/muccg/rdrf/issues/393)
+- djnago-useraudit 1.4.0 [\#356](https://github.com/muccg/rdrf/issues/356)
+- django-iprestrict 1.1.1 [\#351](https://github.com/muccg/rdrf/issues/351)
+- django 1.10.5 [\#350](https://github.com/muccg/rdrf/issues/350)
 
 ## [1.7.15](https://github.com/muccg/rdrf/tree/1.7.15) (2017-01-16)
 [Full Changelog](https://github.com/muccg/rdrf/compare/1.7.14...1.7.15)
@@ -14,6 +40,7 @@
 **Closed issues:**
 
 - django-useraudit 1.4.0 [\#357](https://github.com/muccg/rdrf/issues/357)
+- django-iprestrict 1.1.1 for rdrf 1.7.15 [\#355](https://github.com/muccg/rdrf/issues/355)
 
 ## [1.7.14](https://github.com/muccg/rdrf/tree/1.7.14) (2016-12-07)
 [Full Changelog](https://github.com/muccg/rdrf/compare/1.7.13...1.7.14)
