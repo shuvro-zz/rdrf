@@ -1,28 +1,41 @@
 # -*- encoding: utf-8 -*-
-from django.test import TestCase, RequestFactory
-from rdrf.exporter import Exporter, ExportType
-from rdrf.importer import Importer, ImportState
-from rdrf.models import Section
-from rdrf.models import Registry
-from rdrf.models import CDEPermittedValueGroup
-from rdrf.models import CDEPermittedValue
-from rdrf.models import CommonDataElement
-from rdrf.models import RegistryForm
-from rdrf.form_view import FormView
-from registry.patients.models import Patient
-from registry.groups.models import WorkingGroup
-from registry.groups.models import CustomUser
-from registry.patients.models import State, PatientAddress, AddressType
-from datetime import datetime
-from django.forms.models import model_to_dict
-import yaml
-from django.contrib.auth import get_user_model
-from rdrf.utils import de_camelcase, check_calculation
-from rdrf.mongo_client import construct_mongo_client
-
-
-from django.conf import settings
+import logging
 import os
+import yaml
+from datetime import datetime
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.forms.models import model_to_dict
+from django.test import TestCase, RequestFactory
+
+from .exporter import Exporter, ExportType
+from .importer import Importer, ImportState
+from .models import Registry, RegistryForm, Section
+from .models import CDEPermittedValueGroup, CDEPermittedValue
+from .models import CommonDataElement
+from .models import Modjgo
+from .form_view import FormView
+from registry.patients.models import Patient
+from registry.patients.models import State, PatientAddress, AddressType
+from registry.groups.models import WorkingGroup, CustomUser
+from .utils import de_camelcase, check_calculation, TimeStripper
+from copy import deepcopy
+
+logger = logging.getLogger(__name__)
+
+def mock_messages():
+    """
+    This switches off messaging, which requires request middleware
+    which doesn't exist in RequestFactory requests.
+    """
+    def mock_add_message(request, level, msg, *args, **kwargs):
+        logger.info("Django %s Message: %s" % (level, msg))
+    def mock_error(request, msg, *args, **kwargs):
+        logger.info("Django Error Message: %s" % msg)
+    messages.add_message = mock_add_message
+    messages.error = mock_error
+mock_messages()
 
 
 class SectionFiller(object):
@@ -55,7 +68,7 @@ class FormFiller(object):
 
 
 class RDRFTestCase(TestCase):
-    fixtures = ['testing_auth.json', 'testing_users.json', 'testing_rdrf.json']
+    fixtures = ['testing_auth', 'testing_users', 'testing_rdrf']
 
 
 class TestFormPermissions(RDRFTestCase):
@@ -206,7 +219,6 @@ class FormTestCase(RDRFTestCase):
 
     def setUp(self):
         super(FormTestCase, self).setUp()
-        self._reset_mongo()
         self.registry = Registry.objects.get(code='fh')
         self.user = CustomUser.objects.get(username="curator")
         self.user.registry = [self.registry]
@@ -230,16 +242,6 @@ class FormTestCase(RDRFTestCase):
         self.patient_address.save()
 
         self.request_factory = RequestFactory()
-
-    def _reset_mongo(self):
-        self.client = construct_mongo_client()
-        # delete any testing databases
-        for db in self.client.database_names():
-            if db.startswith("testing_"):
-                print("deleting %s" % db)
-                self.client.drop_database(db)
-
-        print("Testing Mongo Reset OK")
 
     def create_patient(self):
         from rdrf.contexts_api import RDRFContextManager
@@ -309,6 +311,54 @@ class FormTestCase(RDRFTestCase):
     def _create_form_key(self, form, section, cde_code):
         return settings.FORM_SECTION_DELIMITER.join([form.name, section.code, cde_code])
 
+    def test_patient_archiving(self):
+        from registry.patients.models import Patient
+        
+        patient_model = self.create_patient()
+        self.assertTrue(patient_model.active)
+        
+        my_id = patient_model.pk
+
+        patient_model.delete()
+        self.assertEqual(patient_model.active, False)
+
+        # should not be findable
+        with self.assertRaises(Patient.DoesNotExist):
+            dummy = Patient.objects.get(id=my_id)
+
+        # test really_all object manager method on Patients
+        self.assertEqual(my_id, Patient.objects.really_all().get(id=my_id).id)
+
+        # test hard delete
+
+        patient_model._hard_delete()
+
+        with self.assertRaises(Patient.DoesNotExist):
+            dummy = Patient.objects.get(id=my_id)
+
+        with self.assertRaises(Patient.DoesNotExist):
+            dummy = Patient.objects.really_all().get(id=my_id)
+
+
+        # test can archive prop on CustomUser
+        # by default genetic user can't delete as they don't have patient delete permission
+
+        genetic_user = CustomUser.objects.get(username='genetic')
+        self.assertFalse(genetic_user.can_archive)
+
+        # admin can by default
+        admin_user = CustomUser.objects.get(username='admin')
+        self.assertTrue(admin_user.can_archive)
+
+        # clinical can't either
+        clinical_user = CustomUser.objects.get(username='clinical')
+        self.assertFalse(clinical_user.can_archive)
+
+        
+        
+        
+        
+
     def test_simple_form(self):
 
         def form_value(form_name, section_code, cde_code, mongo_record):
@@ -331,20 +381,11 @@ class FormTestCase(RDRFTestCase):
         request = self._create_request(self.simple_form, form_data)
         view = FormView()
         view.request = request
-        # This switches off messaging , which requires request middleware which
-        # doesn't exist in RequestFactory requests
-        view.testing = True
         view.post(request, self.registry.code, self.simple_form.pk, self.patient.pk, self.default_context.pk)
 
-        mongo_query = {"django_id": self.patient.pk,
-                       "django_model": self.patient.__class__.__name__,
-                       "context_id": self.patient.default_context(self.registry).pk}
-
-        mongo_db = self.client["testing_" + self.registry.code]
-
-        collection_name = "cdes"
-        collection = mongo_db[collection_name]
-        mongo_record = collection.find_one(mongo_query)
+        collection = Modjgo.objects.collection(self.registry.code, "cdes")
+        context_id = self.patient.default_context(self.registry).id
+        mongo_record = collection.find(self.patient, context_id).data().first()
 
         print("*** MONGO RECORD = %s ***" % mongo_record)
 
@@ -377,63 +418,19 @@ class FormTestCase(RDRFTestCase):
 class LongitudinalTestCase(FormTestCase):
 
     def test_simple_form(self):
-        mongo_db = self.client["testing_" + self.registry.code]
         super(LongitudinalTestCase, self).test_simple_form()
         # should have one snapshot
-        collection = mongo_db["history"]
-        snapshots = [s for s in collection.find({"django_id": self.patient.pk, "record_type": "snapshot"})]
-        assert len(snapshots) > 0, "History should be filled in on save"
+        qs = Modjgo.objects.collection(self.registry.code, "history")
+        snapshots = qs.find(self.patient, record_type="snapshot").data()
+        self.assertGreater(len(snapshots), 0,
+                           "History should be filled in on save")
         for snapshot in snapshots:
-            assert "record" in snapshot, "Each snapshot should have a record field"
-            assert "timestamp" in snapshot, "Each snapshot should have a timestamp field"
-            assert "forms" in snapshot["record"], "Each  snapshot should record dict contain a forms field"
-
-    def xxx_longitudinal_spreadsheet_report(self):
-
-        self._reset_mongo()
-
-        def simulate_edit(name, age, height, weight):
-            ff = FormFiller(self.simple_form)
-            ff.sectionA.CDEName = name
-            ff.sectionA.CDEAge = age
-            ff.sectionB.CDEHeight = height
-            ff.sectionB.CDEWeight = weight
-            form_data = ff.data
-            request = self._create_request(self.simple_form, form_data)
-            view = FormView()
-            view.request = request
-            # This switches off messaging , which requires request middleware which
-            # doesn't exist in RequestFactory requests
-            view.testing = True
-            view.post(request, self.registry.code, self.simple_form.pk, self.patient.pk, self.default_context.pk)
-
-        # this should create some snapshots
-        simulate_edit("Fred", 23, 172.5, 85.0)
-        simulate_edit("Fred", 24, 172.5, 87.0)
-        simulate_edit("Fred", 25, 172.5, 88.0)
-        simulate_edit("Fred", 26, 172.5, 95.0)
-
-        mongo_db = self.client["testing_" + self.registry.code]
-        collection = mongo_db["history"]
-        snapshots = [s for s in collection.find({"django_id": self.patient.pk, "record_type": "snapshot"})]
-        assert len(snapshots) > 1, "History should be filled in on save"
-        assert len(snapshots) == 4, "Wrong number of snapshots: expected 4 actual %s" % len(snapshots)
-
-        from rdrf.spreadsheet_report import SpreadSheetReport
-
-        class FakeModel(object):
-
-            def __init__(self, name, code=""):
-                self.name = name
-                self.code = code
-
-
-class FormProgressTest(FormTestCase):
-
-    def test_progress_calcs(self):
-        mongo_db = self.client["testing_" + self.registry.code]
-        super(FormProgressTest, self).test_simple_form()
-        collection = mongo_db["progress"]
+            self.assertIn("record", snapshot,
+                          "Each snapshot should have a record field")
+            self.assertIn("timestamp", snapshot,
+                          "Each snapshot should have a timestamp field")
+            self.assertIn("forms", snapshot["record"],
+                          "Each  snapshot should record dict contain a forms field")
 
 
 class DeCamelcaseTestCase(TestCase):
@@ -489,3 +486,504 @@ class JavascriptCheckTestCase(TestCase):
     def test_nonascii(self):
         err = check_calculation("context.result = '💩';")
         self.assertEqual(err, "")
+
+
+class FakeModjgo(object):
+            def __init__(self, pk, data):
+                self.pk = pk
+                self.data = data
+            def save(self):
+                print("Fake Modjgo save called")
+
+
+class TimeStripperTestCase(TestCase):
+    def setUp(self):
+        super(TimeStripperTestCase, self).setUp()
+
+        
+        self.data_with_date_cdes = {'django_model': 'Patient',
+                                    'ClinicalData_timestamp': '2017-02-14T10:23:10.601182',
+                                    'context_id': 4,
+                                    'django_id': 3,
+                                    'forms': [{'name': 'ClinicalData',
+                                               'sections': [{'code': 'fhDateSection', 'allow_multiple': False,
+                                                             'cdes': [{'value': 'fh_is_index', 'code': 'CDEIndexOrRelative'},
+                                                                      {'value': '1972-06-15T00:00:00.00', 'code': 'DateOfAssessment'},
+                                                                      {'value': '2015-01-05T10:23:10.601182', 'code': 'FHconsentDate'}]},
+                                                            {'code': 'SEC0007', 'allow_multiple': False,
+                                                             'cdes': [{'value': '', 'code': 'CDE00024'},
+                                                                      {'value': '', 'code': 'CDEfhDutchLipidClinicNetwork'}]}]}]}
+
+        self.copy_of_initial_data = deepcopy(self.data_with_date_cdes)
+        
+        
+        self.data_without_date_cdes =  {'django_model': 'Patient',
+                                    'ClinicalData_timestamp': '2017-02-14T10:23:10.601182',
+                                    'context_id': 40,
+                                    'django_id': 300,
+                                    'forms': [{'name': 'ClinicalData',
+                                               'sections': [{'code': 'fhDateSection', 'allow_multiple': False,
+                                                             'cdes': [{'value': 'fh_is_index', 'code': 'CDEIndexOrRelative'}]},
+                                                            {'code': 'SEC0007', 'allow_multiple': False,
+                                                             'cdes': [{'value': '', 'code': 'CDE00024'},
+                                                                      {'value': '', 'code': 'CDEfhDutchLipidClinicNetwork'}]}]}]}
+
+        
+
+        self.m1 = FakeModjgo(1, self.data_with_date_cdes)
+        self.m2 = FakeModjgo(2, self.data_without_date_cdes)
+
+        self.ts = TimeStripper([self.m1, self.m2])
+        self.ts.test_mode = True
+        self.ts.date_cde_codes = ['DateOfAssessment', 'FHconsentDate']
+        
+
+    def test_timestripper(self):
+        a = deepcopy(self.data_with_date_cdes)
+
+        expected_date_of_assessment = "1972-06-15"
+        expected_fh_consent_date = "2015-01-05"
+        expected = [expected_date_of_assessment, expected_fh_consent_date]
+        ClinicalData_timestamp_before = self.data_with_date_cdes["ClinicalData_timestamp"]
+        fh_index_before  = self.data_with_date_cdes["forms"][0]["sections"][0]["cdes"][0]["value"]
+        
+        
+        self.ts.forward()
+        ClinicalData_timestamp_after = self.data_with_date_cdes["ClinicalData_timestamp"]
+        fh_index_after  = self.data_with_date_cdes["forms"][0]["sections"][0]["cdes"][0]["value"]
+
+
+        self.assertTrue(self.ts.converted_date_cdes == expected,
+                        "Expected %s Actual %s" % (expected, self.ts.converted_date_cdes))
+
+        value1 = self.data_with_date_cdes["forms"][0]["sections"][0]["cdes"][1]["value"]
+        self.assertTrue(value1 == expected_date_of_assessment, "DateOfAssessment value not modified by TimeStripper")
+        value2 = self.data_with_date_cdes["forms"][0]["sections"][0]["cdes"][2]["value"]
+        self.assertTrue(value2 == expected_fh_consent_date, "FHConsentdate value not modified by TimeStripper")
+
+        self.assertTrue(ClinicalData_timestamp_after == ClinicalData_timestamp_before, "Timestamps which are not date cdes should not be affected by TimeStripper")
+        self.assertTrue(fh_index_before == fh_index_after, "Non date cdes should not be affected by TimeStripper")
+
+
+
+    def test_update_of_multisections(self):
+        # multisection with 2 items , one cde Surgery , another SurgeryDate
+        cde_dict1 = {"code": "Surgery", "value": "Appendix Removed"}
+        cde_dict2 = {"code": "SurgeryDate", "value": "2017-02-14T00:00:00"}
+        cde_dict3 = {"code": "Surgery", "value": "Stomach Ulcer"}
+        cde_dict4 = {"code": "SurgeryDate", "value": "2018-03-26T00:00:00"}
+        # assume last item ok
+        cde_dict5 = {"code": "Surgery", "value": "Heart Surgery"}
+        cde_dict6 = {"code": "SurgeryDate", "value": "2011-11-05"}
+        
+        item1 = [cde_dict1, cde_dict2]
+        item2 = [cde_dict3, cde_dict4]
+        item3 = [cde_dict5, cde_dict6]
+
+        multisection = {"allow_multiple": True,
+                        "cdes" : [item1, item2, item3]}
+        
+        
+        data_with_multisections = {"forms": [ {"form": "testing",
+                                               "sections": [multisection]}]}
+        
+        copy_before_op = deepcopy(data_with_multisections)
+        m = FakeModjgo(23, data_with_multisections)
+
+        ts = TimeStripper([m])
+        ts.test_mode = True
+        ts.date_cde_codes = ['SurgeryDate']
+
+        ts.forward()
+
+        self.assertTrue(ts.converted_date_cdes == ["2017-02-14", "2018-03-26"],
+                        "Multisection timestrip failed: actual = %s" % ts.converted_date_cdes)
+
+
+        expected_value1 = "2017-02-14"
+        actual_value1 = m.data["forms"][0]["sections"][0]["cdes"][0][1]["value"]
+        self.assertEqual(expected_value1, actual_value1,
+                         "Update of multisection failed for first item: actual = %s" % actual_value1)
+
+        expected_value2 = "2018-03-26"
+        actual_value2 = m.data["forms"][0]["sections"][0]["cdes"][1][1]["value"]
+        self.assertEqual(expected_value2, actual_value2,
+                         "Update of multisection failed for second item: actual = %s" % actual_value2)
+        
+        expected_value3 = "2011-11-05" #n shouldn't have changed
+        actual_value3 = m.data["forms"][0]["sections"][0]["cdes"][2][1]["value"]
+        self.assertEqual(expected_value2, actual_value2,
+                         "Update of multisection failed for third item: actual = %s" % actual_value3)
+
+
+    def test_history_munging(self):
+        from rdrf.utils import HistoryTimeStripper
+        history_modjgo_data = { "django_id": 1,
+                 "record": {
+                "django_id": 1,
+                      "timestamp": "2017-02-13T12:28:49.355839",
+                      "forms": [
+                        {
+                          "sections": [
+                            {
+                              "allow_multiple": False,
+                              "cdes": [
+                                {
+                                  "value": "fh_is_index",
+                                  "code": "CDEIndexOrRelative"
+                                },
+                                {
+                                  "value": "2017-02-15",
+                                  "code": "DateOfAssessment"
+                                },
+                                {
+                                  "value": "2017-02-14T00:00:00.000",
+                                  "code": "FHconsentDate"
+                                }
+                              ],
+                              "code": "fhDateSection"
+                            },
+                            {
+                              "allow_multiple": False,
+                              "cdes": [
+                                {
+                                  "value": "",
+                                  "code": "CDE00024"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "CDEfhDutchLipidClinicNetwork"
+                                }
+                              ],
+                              "code": "SEC0007"
+                            },
+                            {
+                              "allow_multiple": False,
+                              "cdes": [
+                                {
+                                  "value": "fh2_y",
+                                  "code": "CDE00004"
+                                },
+                                {
+                                  "value": "fh2_n",
+                                  "code": "FHFamHistTendonXanthoma"
+                                },
+                                {
+                                  "value": "fh2_n",
+                                  "code": "FHFamHistArcusCornealis"
+                                },
+                                {
+                                  "value": "fh2_y",
+                                  "code": "CDE00003"
+                                },
+                                {
+                                  "value": "y_childunder18",
+                                  "code": "FHFamilyHistoryChild"
+                                }
+                              ],
+                              "code": "SEC0002"
+                            },
+                            {
+                              "allow_multiple": False,
+                              "cdes": [
+                                {
+                                  "value": "",
+                                  "code": "FHSupravalvularDisease"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "FHAgeAtMI"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "FHAgeAtCV"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHPremNonCoronary"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHAorticValveDisease"
+                                },
+                                {
+                                  "value": "fh2_n",
+                                  "code": "FHPersHistCerebralVD"
+                                },
+                                {
+                                  "value": "fhpremcvd_unknown",
+                                  "code": "CDE00011"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHCoronaryRevasc"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHMyocardialInfarction"
+                                }
+                              ],
+                              "code": "SEC0004"
+                            },
+                            {
+                              "allow_multiple": False,
+                              "cdes": [
+                                {
+                                  "value": "u_",
+                                  "code": "CDE00002"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHXanthelasma"
+                                },
+                                {
+                                  "value": "y",
+                                  "code": "CDE00001"
+                                }
+                              ],
+                              "code": "SEC0001"
+                            },
+                            {
+                              "allow_multiple": False,
+                              "cdes": [
+                                {
+                                  "value": "",
+                                  "code": "PlasmaLipidTreatment"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "CDE00019"
+                                },
+                                {
+                                  "value": "NaN",
+                                  "code": "LDLCholesterolAdjTreatment"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "CDE00013"
+                                }
+                              ],
+                              "code": "FHLDLforFHScore"
+                            },
+                            {
+                              "allow_multiple": True,
+                              "cdes": [
+                                [
+                                  {
+                                    "value": None,
+                                    "code": "CDE00014"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHLipidProfileUntreatedDate"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHAlbum"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "CDE00012"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHCK"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHA1"
+                                  },
+                                  {
+                                    "value": "",
+                                    "code": "PlasmaLipidTreatmentNone"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHAST"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "CDE00015"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHApoB"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHALT"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHLLDLconc"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHCreatinine"
+                                  },
+                                  {
+                                    "value": "",
+                                    "code": "FHCompliance"
+                                  },
+                                  {
+                                    "value": "",
+                                    "code": "CDEfhOtherIntolerantDrug"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "CDE00016"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHCRP"
+                                  }
+                                ]
+                              ],
+                              "code": "SEC0005"
+                            },
+                            {
+                              "allow_multiple": False,
+                              "cdes": [
+                                {
+                                  "value": "NaN",
+                                  "code": "CDEBMI"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHHypertriglycerd"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "HbA1c"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHHypothyroidism"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "CDE00009"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "FHHeartRate"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "CDE00010"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "FHWaistCirc"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHObesity"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "CDE00008"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "CDEWeight"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "FHPackYears"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "CDEHeight"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "CDE00007"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHAlcohol"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "CDE00005"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "CDE00006"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHCVDOther"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "FHeGFR"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "ChronicKidneyDisease"
+                                },
+                                {
+                                  "value": "",
+                                  "code": "FHHepaticSteatosis"
+                                },
+                                {
+                                  "value": None,
+                                  "code": "FHTSH"
+                                }
+                              ],
+                              "code": "SEC0003"
+                            },
+                            {
+                              "allow_multiple": True,
+                              "cdes": [
+                                [
+                                  {
+                                    "value": "",
+                                    "code": "FHTrialStatus"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHTrialSTartDate"
+                                  },
+                                  {
+                                    "value": "",
+                                    "code": "FHClinicalTrialName"
+                                  },
+                                  {
+                                    "value": None,
+                                    "code": "FHTrialLength"
+                                  }
+                                ]
+                              ],
+                              "code": "FHClinicalTrials"
+                            }
+                          ],
+                          "name": "ClinicalData"
+                        }
+                      ],
+                      "context_id": 1,
+                      "ClinicalData_timestamp": "2017-02-13T12:28:49.355839",
+                      "django_model": "Patient"
+                    },
+                    "record_type": "snapshot",
+                    "timestamp": "2017-02-13 12:28:49.665333",
+                    "registry_code": "fh",
+                    "context_id": 1,
+                    "django_model": "Patient"
+                  }
+
+        expected_dates = ['2017-02-14']
+        history_record = FakeModjgo(73, history_modjgo_data)
+        ts = HistoryTimeStripper([history_record])
+        ts.test_mode = True
+        ts.date_cde_codes = ['FHconsentDate']
+        ts.forward()
+        
+
+        
+        self.assertTrue(ts.converted_date_cdes == expected_dates,
+                        "Expected: %s, Actual: %s" % (expected_dates,
+                                                      ts.converted_date_cdes))
+

@@ -7,7 +7,10 @@ from django.db import IntegrityError
 from django.db import transaction
 from django.utils.html import strip_tags
 from django.utils.encoding import smart_bytes
+from copy import deepcopy
 
+import datetime
+import dateutil.parser
 import logging
 import re
 import os.path
@@ -18,17 +21,6 @@ logger = logging.getLogger(__name__)
 
 class BadKeyError(Exception):
     pass
-
-
-def mongo_db_name(registry, testing=False):
-    prefix = "testing_" if testing else settings.MONGO_DB_PREFIX
-    return prefix + registry
-
-
-def mongo_db_name_reg_id(registry_id):
-    from .models import Registry
-    reg = Registry.objects.get(id=registry_id)
-    return settings.MONGO_DB_PREFIX + reg.code
 
 
 def get_code(delimited_key):
@@ -131,25 +123,6 @@ def get_user(username):
 
 def get_users(usernames):
     return [x for x in [get_user(username) for username in usernames] if x is not None]
-
-
-def has_feature(feature_name):
-    if settings.FEATURES == "*":
-        return True
-    return feature_name in settings.FEATURES  # e.g. [ 'email_notification', 'adjudication' ]
-
-
-def requires_feature(feature_name):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            if has_feature(feature_name):
-                return func(*args, **kwargs)
-            else:
-                logger.info(
-                    "%s will not be run with args %s kwargs %s as the site lacks feature %s" %
-                    (func.__name__, args, kwargs, feature_name))
-        return wrapper
-    return decorator
 
 
 def get_full_link(request, partial_link, login_link=False):
@@ -346,13 +319,12 @@ def get_error_messages(forms):
 
 
 def timed(func):
-    from datetime import datetime
     logger = logging.getLogger(__name__)
 
     def wrapper(*args, **kwargs):
-        a = datetime.now()
+        a = datetime.datetime.now()
         result = func(*args, **kwargs)
-        b = datetime.now()
+        b = datetime.datetime.now()
         c = b - a
         func_name = func.__name__
         logger.debug("%s time = %s secs" % (func_name, c))
@@ -414,14 +386,24 @@ def check_calculation(calculation):
 
 
 def format_date(value):
-    d = value.date()
-    return "%s-%s-%s" % (d.day, d.month, d.year)
+    """
+    Formats a date in Australian order, separated by hyphens, without
+    leading zeroes.
+    """
+    return "{d.day}-{d.month}-{d.year}".format(d=value)
 
+def parse_iso_date(s):
+    "Opposite of datetime.datetime.isoformat()"
+    return datetime.datetime.strptime(s, "%Y-%m-%d").date() if s else None
+
+def parse_iso_datetime(s):
+    "Opposite of datetime.date.isoformat()"
+    return dateutil.parser.parse(s) if s else None
 
 def wrap_uploaded_files(registry_code, post_files_data):
     from django.core.files.uploadedfile import UploadedFile
     from rdrf.file_upload import FileUpload
-    
+
     def wrap(key, value):
         logger.debug("checking key %s" % key)
         if isinstance(value, UploadedFile):
@@ -432,4 +414,167 @@ def wrap_uploaded_files(registry_code, post_files_data):
 
     return { key: wrap(key, value) for key, value in list(post_files_data.items()) }
 
+
+class Message():
+    def __init__(self, text, tags=None):
+        self.text = text
+        self.tags = tags
+
+    @staticmethod
+    def success(text):
+        return Message(text, tags='success')
+
+    @staticmethod
+    def info(text):
+        return Message(text, tags='info')
+
+    @staticmethod
+    def warning(text):
+        return Message(text, tags='warning')
+
+    @staticmethod
+    def danger(text):
+        return Message(text, tags='danger')
+
+    @staticmethod
+    def error(text):
+        return Message(text, tags='danger')
+
+    def __repr__(self):
+        return self.text
+
+
+
+class TimeStripper(object):
+    """
+    This class exists to fix an error we introduced in the migration
+    moving from Mongo to pure Django models with JSON fields ( "Modjgo" objects.)
+    CDE date values were converted  into iso strings including a time T substring.
+    This was done recursively for the cdes and history collections 
+    """
+    
+    def __init__(self, dataset):
+        self.dataset = dataset # queryset live , lists of data records for testing
+        # following fields used for testing
+        self.test_mode = False
+        self.converted_date_cdes = []
+        self.date_cde_codes = []
+        self.num_updates = 0 # actual conversions performed
+        
+
+    def forward(self):
+        for thing in self.dataset:
+            print("Checking Modjgo object pk %s" % thing.pk)
             
+            self.update(thing)
+        print("Finished: Updated %s Modjgo objects" % self.num_updates)
+
+    def get_id(self, m):
+        pk = m.pk
+        
+        if m.data:
+            if "django_id" in m.data:
+                django_id = m.data["django_id"]
+            else:
+                django_id = None
+
+            if "django_model" in m.data:
+                django_model = m.data["django_model"]
+            else:
+                django_model = None
+            return "Modjgo pk %s Django Model %s Django id %s" % (pk,
+                                                                  django_model,
+                                                                  django_id)
+        else:
+            return "Modjgo pk %s" % pk
+        
+
+            
+
+    def munge_timestamp(self, datestring):
+        if datestring is None:
+            return datestring
+        
+        if "T" in datestring:
+            t_index = datestring.index("T")
+            return datestring[:t_index]
+        else:
+            return datestring
+
+    def is_date_cde(self, cde_dict):
+        code = cde_dict["code"]
+        if self.test_mode:
+            return code in self.date_cde_codes
+        else:
+            # not test mode
+            from rdrf.models import CommonDataElement
+            try:
+                cde_model = CommonDataElement.objects.get(code=code)
+                value = cde_model.datatype == "date"
+                if value:
+                    return value
+
+            except CommonDataElement.DoesNotExist:
+                print("Missing CDE Model! Data has code %s which does not exist on the site" % code)
+
+    def update_cde(self, cde):
+        code = cde.get("code", None)
+        if not code:
+            print("No code in cde dict?? - not updating")
+            return
+        old_datestring = cde["value"]
+        new_datestring = self.munge_timestamp(old_datestring)
+        if new_datestring != old_datestring:
+            cde["value"] = new_datestring
+            if self.test_mode:
+                self.converted_date_cdes.append(cde["value"])
+            print("Date CDE %s %s --> %s" % (code,
+                                             old_datestring,
+                                             new_datestring))
+
+            return True
+
+    def update(self, m):
+        updated = False
+        ident = self.get_id(m)
+        if m.data:
+            data_copy = deepcopy(m.data)
+            updated = self.munge_data(m.data)
+            if updated:
+                try:
+                    m.save()
+                    print("%s saved OK" % ident)
+                    self.num_updates += 1
+                except Exception as ex:
+                    print("Error saving Modjgo object %s after updating: %s" % (ident,
+                                                                                ex))
+                    raise   # rollback
+                    
+    def munge_data(self, data):
+        updated = 0
+        if "forms" in data:
+            for form in data["forms"]:
+                if "sections" in form:
+                    for section in form["sections"]:
+                        if not section["allow_multiple"]:
+                            if "cdes" in section:
+                                for cde in section["cdes"]:
+                                    if self.is_date_cde(cde):
+                                        if self.update_cde(cde):
+                                            updated += 1
+                        else:
+                            items = section["cdes"]
+                            for item in items:
+                                for cde in item:
+                                    if self.is_date_cde(cde):
+                                        if self.update_cde(cde):
+                                            updated += 1
+                                            
+        return updated > 0
+                    
+
+class HistoryTimeStripper(TimeStripper):
+    def munge_data(self, data):
+        # History embeds the full forms dictionary in the record key
+        return super().munge_data(data["record"])
+
