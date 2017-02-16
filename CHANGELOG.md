@@ -28,9 +28,8 @@
 
 **Closed issues:**
 
-- 'Account lockout' emails are not sending from https://fhregistry-international.com/ [\#378](https://github.com/muccg/rdrf/issues/378)
 - Modjgo management command converted dates to isostrings  [\#393](https://github.com/muccg/rdrf/issues/393)
-- djnago-useraudit 1.4.0 [\#356](https://github.com/muccg/rdrf/issues/356)
+- django-useraudit 1.4.0 [\#356](https://github.com/muccg/rdrf/issues/356)
 - django-iprestrict 1.1.1 [\#351](https://github.com/muccg/rdrf/issues/351)
 - django 1.10.5 [\#350](https://github.com/muccg/rdrf/issues/350)
 
