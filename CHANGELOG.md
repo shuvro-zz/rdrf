@@ -5,7 +5,16 @@
 
 **Implemented enhancements:**
 
-- Deprecate Mongo ClinicalDB - replace with Postgresql [\#401](https://github.com/muccg/rdrf/issues/401)
+- Adds possibility to order follow up forms by their name. [\#410](https://github.com/muccg/rdrf/issues/410)
+- Patient delete [\#409](https://github.com/muccg/rdrf/issues/409)
+- settings: add DATA\_UPLOAD\_MAX\_NUMBER\_FIELDS [\#408](https://github.com/muccg/rdrf/issues/408)
+- Clean up questionnaire response view [\#407](https://github.com/muccg/rdrf/issues/407)
+- questionnaire view: make auth checks more defensive [\#406](https://github.com/muccg/rdrf/issues/406)
+- Remove unused admin templates [\#405](https://github.com/muccg/rdrf/issues/405)
+- Remove FEATURES setting [\#404](https://github.com/muccg/rdrf/issues/404)
+- remove unused views [\#403](https://github.com/muccg/rdrf/issues/403)
+- admin: add user active and password expiry to list display [\#402](https://github.com/muccg/rdrf/issues/402)
+- Clinical conversion from mongo to sql database [\#401](https://github.com/muccg/rdrf/issues/401)
 - settings: Use Django settings, not env directly [\#382](https://github.com/muccg/rdrf/issues/382)
 - If test zips are bad in some way - bail out of aloe tests early [\#371](https://github.com/muccg/rdrf/issues/371)
 - The users should be warned that their password will expire soon [\#369](https://github.com/muccg/rdrf/issues/369)
@@ -16,9 +25,9 @@
 
 **Fixed bugs:**
 
-- Error creating  a patient from a Questionnaire Response [\#388](https://github.com/muccg/rdrf/issues/388)
 - DataError at /explorer/query/download/12/download [\#391](https://github.com/muccg/rdrf/issues/391)
 - Error redirecting after deleting \(archiving\) a patient [\#389](https://github.com/muccg/rdrf/issues/389)
+- Error creating  a patient from a Questionnaire Response [\#388](https://github.com/muccg/rdrf/issues/388)
 - ValueError at /admin/rdrf/questionnaireresponse/ [\#386](https://github.com/muccg/rdrf/issues/386)
 - AttributeError at /DM1/questionnaire/ [\#385](https://github.com/muccg/rdrf/issues/385)
 - TypeError at /patientslisting [\#384](https://github.com/muccg/rdrf/issues/384)
