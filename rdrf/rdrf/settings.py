@@ -6,6 +6,7 @@ import ssl
 from ccg_django_utils.conf import EnvConfig
 # import message constants so we can use bootstrap style classes
 from django.contrib.messages import constants as message_constants
+from django.core.urlresolvers import reverse_lazy
 
 env = EnvConfig()
 
@@ -135,6 +136,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.locale.LocaleMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -166,6 +168,10 @@ INSTALLED_APPS = [
     'registration',
     'storages',
     'django_cron',
+    'django_otp',
+    'django_otp.plugins.otp_static',
+    'django_otp.plugins.otp_totp',
+    'two_factor'
 ]
 
 
@@ -267,6 +273,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = env.get("data_upload_max_number_fields", 30000) 
 # The setting `LOGIN_FAILURE_LIMIT` allows to enable a number of allowed login attempts.
 # If the settings is not set or set to 0, the feature is disabled.
 LOGIN_FAILURE_LIMIT = env.get("login_failure_limit", 3)
+LOGIN_URL = 'two_factor:login'
 
 # APPLICATION SPECIFIC SETTINGS
 AUTH_PROFILE_MODULE = 'groups.User'

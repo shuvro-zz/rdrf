@@ -40,6 +40,7 @@ requirements=[
      "SQLAlchemy==1.0.16",
      "uwsgi==2.0.13.1",
      "django_cron==0.5.0",
+     "django-two-factor-auth"
 ]
 
 
