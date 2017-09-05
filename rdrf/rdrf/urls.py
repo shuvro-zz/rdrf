@@ -65,6 +65,7 @@ if settings.DEBUG is True:
     ]
 
 urlpatterns += [
+    url(r'', include('two_factor.urls', 'two_factor')),
     url(r'^translations/jsi18n/$', JavaScriptCatalog.as_view(), name='javascript-catalog'),
     url(r'^iprestrict/', include('iprestrict.urls')),
     url(r'^useraudit/', include('useraudit.urls')),
@@ -94,8 +95,8 @@ urlpatterns += [
     url(r'contexts/(?P<registry_code>\w+)/(?P<patient_id>\d+)/(?P<context_id>\d+)/edit/?$',
         RDRFContextEditView.as_view(),
         name="context_edit"),
-    url(r'^login/?$', django.contrib.auth.views.login,
-        kwargs={'template_name': 'admin/login.html', 'authentication_form': RDRFAuthenticationForm}, name='login'),
+    #url(r'^login/?$', django.contrib.auth.views.login,
+    #    kwargs={'template_name': 'admin/login.html', 'authentication_form': RDRFAuthenticationForm}, name='login'),
     url(r'^router/', login_router.RouterView.as_view(), name="login_router"),
 
     url(r"^(?P<registry_code>\w+)/forms/(?P<form_id>\w+)/(?P<patient_id>\d+)/(?P<context_id>add)/?$",
