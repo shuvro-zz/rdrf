@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+import django
+django.setup()
+import sys
+
+from registry.patients.models import Patient
+from registry.patients.models import ParentGuardian
+
+
+def usage():
+    print("usage: self_patients check|fix|--help")
+    print("self_patients reports/fixed parents added as their own children")
+
+
+def get_command():
+    if len(sys.argv) != 2 or sys.argv[1] not in ['check', 'fix']:
+        usage()
+        sys.exit(1)
+    return sys.argv[1]
+
+
+def parent_added_as_child(parent):
+    # if a patient becomes a parent
+    # they should be linked as a self_patient
+    # but not be present in children list
+    if parent.self_patient:
+        if parent.self_patient.id in [child.id for child in parent.patient.all()]:
+            return True
+
+
+def report(parent):
+    return "pg %s self_patient %s patient list %s" % (parent.id,
+                                                      parent.self_patient.id,
+                                                      [c.id for c in parent.patient.all()])
+
+
+def fix_up(parent):
+    print("before fix: %s" % report(parent))
+    parent.patient.remove(parent.self_patient)
+    parent.save()
+    print("after fix: %s" % report(parent))
+
+
+if __name__ == '__main__':
+    command = get_command()
+    for parent in ParentGuardian.objects.all():
+        if parent_added_as_child(parent):
+            if command == "check":
+                print(report(parent))
+            elif command == "fix":
+                fix_up(parent)
