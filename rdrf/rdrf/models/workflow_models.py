@@ -101,3 +101,7 @@ class ClinicianSignupRequest(models.Model):
         csr.save()
         logger.debug("created ClinicianSignUpRequest OK")
         return csr
+
+
+class WorkflowRequest(models.Model):
+    token = models.CharField(max_length=80, default=generate_token, unique=True)
