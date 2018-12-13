@@ -1843,3 +1843,50 @@ class FileStorage(models.Model):
     name = models.CharField(primary_key=True, max_length=255)
     data = models.BinaryField()
     size = models.IntegerField(default=0)
+
+
+class ReviewForm(models.Model):
+    # represents a partial form
+    registry = models.ForeignKey(Registry)
+    code = models.CharField(max_length=80)
+    display_name = models.CharField(max_length=200)
+    elements_json = models.TextField(help_text="List of sections or cdes like: [{'type': 'section','code': 'xyz'}, {'type':'cde','code':'abc'}]")
+    
+    class Meta:
+        unique_together = ('registry', 'code')
+
+    @property
+    def models(self):
+        import json
+        l = []
+        data = json.loads(self.elements_json)
+        for item in data:
+            if item["type"] == "section":
+                section_model = Section.objects.get(code=item["code"])
+                l.append(section_model)
+            elif item["type"] == "cde":
+                cde_model = CommonDataElement.objects.get(code=item["code"])
+                l.append(cde_model)
+        return l
+
+
+    def update_data(self, patient_model, form_data):
+        # probably good to load dynamic data once here
+        for model in self.models:
+            if isinstance(model, Section):
+                self._update_original_section(model, patient_model, form_data)
+            elif isinstance(model, CommonDataElement):
+                self._update_original_cde(model, patient_model, form_data)
+
+
+    def _update_original_section(self, section_model, patient_model, form_data):
+        pass
+
+    def _update_original_cde(self, cde_model, patient_model, form_data):
+        pass
+
+
+    @property
+    def dynamic_form(self):
+        return None
+                

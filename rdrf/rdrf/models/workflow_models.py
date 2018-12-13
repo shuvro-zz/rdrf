@@ -102,6 +102,30 @@ class ClinicianSignupRequest(models.Model):
         logger.debug("created ClinicianSignUpRequest OK")
         return csr
 
+class WorkflowStates:
+    CREATED = "created"
+    ERROR = "error"
+    COMPLETED = "completed"
+
 
 class WorkflowRequest(models.Model):
     token = models.CharField(max_length=80, default=generate_token, unique=True)
+    user = models.ForeignKey(CustomUser)  # the user who will action the request
+    registry = models.ForeignKey(Registry)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    handler = models.CharField(max_length=80, default="WORKFLOW_REQUEST_HANDLER")    # settings.HANDLER_NAME points to a class to import
+    state = models.CharField(max_length=80, default="created")
+
+    def handle(self):
+        from django.conf import settings
+        from django.utils.module_loading import import_string
+        handler_class_name = getattr(settings, self.handler, None)
+        if handler_class_name is None:
+            return
+
+        handler_class = import_string(handler_class_name)
+        handler = handler_class(self.registry, self.token, self.user)
+        new_state = handler.handle_request(self.state)
+        self.state = new_state
+        self.save()
