@@ -1079,6 +1079,12 @@ class MinTypeTest(TestCase):
         self.assertTrue(g[0] is bottom)
 
 
+class FailingTestForTravis(TestCase):
+    def test_travis(self):
+        # I fail
+        self.assertTrue(False)
+
+
 class StructureChecker(TestCase):
     def _run_command(self, *args, **kwargs):
         from django.core import management
