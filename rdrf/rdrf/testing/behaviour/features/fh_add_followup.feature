@@ -39,7 +39,7 @@ Feature: Follow Up forms.
     And I press "Add" button in "Follow Up" group in sidebar 
     And I enter value "02-08-2016" for form "Follow Up" section " " cde "Date of assessment"
     And I click the "Save" button
-    Then location is "Follow Up/2-8-2016"
+    Then location is "This is meant to fail!"
  
 
 
