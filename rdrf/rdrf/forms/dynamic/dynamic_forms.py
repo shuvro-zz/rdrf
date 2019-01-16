@@ -141,3 +141,19 @@ def create_form_class_for_consent_section(
     form_class_dict["clean"] = clean_method
 
     return type(form_class_name, (BaseForm,), form_class_dict)
+
+
+class ReviewFormBuilder:
+    def __init__(self, reviewform_model):
+        self.review = reviewform_model
+
+    def build(self):
+        klass = self._build_class()
+        return klass()
+
+    def _build_class(self):
+       for model in self.review.models:
+           if isinstance(model, Section):
+               pass
+               
+        

@@ -1888,5 +1888,6 @@ class ReviewForm(models.Model):
 
     @property
     def dynamic_form(self):
-        return None
+        from rdrf.forms.dynamic_form import ReviewFormBuilder
+        return ReviewFormBuilder(self).build()
                 
